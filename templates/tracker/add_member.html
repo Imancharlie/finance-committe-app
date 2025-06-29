@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block title %}Add New Member{% endblock %}
+
+{% block extra_css %}
+<style>
+    .compact-header h1 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    .compact-header p {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .compact-header .btn {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.8rem;
+    }
+    .compact-card .card-header {
+        padding: 0.75rem 1rem;
+    }
+    .compact-card .card-header h5 {
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+    .compact-card .card-body {
+        padding: 1rem;
+    }
+    .form-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+    .form-control {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+    .btn {
+        font-size: 0.8rem;
+    }
+    .invalid-feedback {
+        font-size: 0.75rem;
+    }
+    @media (max-width: 768px) {
+        .compact-header h1 { font-size: 1.1rem; }
+        .compact-header p { font-size: 0.75rem; }
+        .compact-card .card-header h5 { font-size: 0.85rem; }
+        .form-label, .form-control, .btn { font-size: 0.75rem; }
+    }
+    @media (max-width: 576px) {
+        .compact-header h1 { font-size: 1rem; }
+        .compact-header p { font-size: 0.7rem; }
+        .compact-card .card-header h5 { font-size: 0.8rem; }
+        .form-label, .form-control, .btn { font-size: 0.7rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card compact-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-plus me-2"></i>Add New Member
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="addMemberForm">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Full Name <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.name.errors %}
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.pledge.id_for_label }}" class="form-label">Pledge Amount (TZS) <span class="text-danger">*</span></label>
+                            {{ form.pledge }}
+                            {% if form.pledge.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.pledge.errors %}
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Default: 70,000 TZS</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label">Phone Number</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.phone.errors %}
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email.errors %}
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.course.id_for_label }}" class="form-label">Course/Program</label>
+                            {{ form.course }}
+                            {% if form.course.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.course.errors %}
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.year.id_for_label }}" class="form-label">Year</label>
+                            {{ form.year }}
+                            {% if form.year.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.year.errors %}
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="bi bi-plus-circle me-2"></i>Add Member
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Success/Error Messages Display -->
+{% if messages %}
+<div class="mt-3">
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {% if message.tags == 'success' %}
+                <i class="bi bi-check-circle me-2"></i>
+            {% elif message.tags == 'error' %}
+                <i class="bi bi-exclamation-triangle me-2"></i>
+            {% elif message.tags == 'warning' %}
+                <i class="bi bi-exclamation-triangle me-2"></i>
+            {% else %}
+                <i class="bi bi-info-circle me-2"></i>
+            {% endif %}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, 5000);
+    // Client-side validation for required fields
+    $('#addMemberForm').on('submit', function(e) {
+        let hasErrors = false;
+        $('.form-control').removeClass('is-invalid');
+        if (!$('#{{ form.name.id_for_label }}').val()) {
+            $('#{{ form.name.id_for_label }}').addClass('is-invalid');
+            hasErrors = true;
+        }
+        if (!$('#{{ form.pledge.id_for_label }}').val() || $('#{{ form.pledge.id_for_label }}').val() <= 0) {
+            $('#{{ form.pledge.id_for_label }}').addClass('is-invalid');
+            hasErrors = true;
+        }
+        if (hasErrors) {
+            e.preventDefault();
+            return false;
+        }
+        $('#submitBtn').prop('disabled', true).html('<i class="bi bi-hourglass-split me-2"></i>Adding...');
+    });
+});
+</script>
+{% endblock %} 

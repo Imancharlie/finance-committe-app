@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Recording - Mission Offering Tracker</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        /* Transaction Recording Specific Styles */
+        .transaction-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .transaction-stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+
+        .transaction-stat-card {
+            flex: 1;
+            min-width: 120px;
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #28a745;
+        }
+
+        .transaction-stat-card.today {
+            border-left-color: #007bff;
+        }
+
+        .transaction-stat-card.pending {
+            border-left-color: #ffc107;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Transaction Table Styles */
+        .transaction-table {
+            font-size: 0.85rem;
+        }
+
+        .transaction-table th {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            padding: 0.75rem 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .transaction-table td {
+            padding: 0.75rem 0.5rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .member-name {
+            font-weight: 500;
+            color: #2c3e50;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .amount-display {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .amount-display:hover {
+            background: #e9ecef;
+            border-color: #007bff;
+        }
+
+        .amount-display.editing {
+            background: white;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        }
+
+        .amount-input {
+            width: 100%;
+            text-align: center;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .remaining-amount {
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .remaining-amount.positive {
+            color: #dc3545;
+        }
+
+        .remaining-amount.negative {
+            color: #28a745;
+        }
+
+        .remaining-amount.zero {
+            color: #6c757d;
+        }
+
+        .save-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .save-btn:disabled {
+            opacity: 0.6;
+        }
+
+        .transaction-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .transaction-today {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .transaction-none {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Search and Filter Section */
+        .transaction-search {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .transaction-stats {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .transaction-stat-card {
+                min-width: auto;
+            }
+
+            .transaction-table {
+                font-size: 0.75rem;
+            }
+
+            .transaction-table th,
+            .transaction-table td {
+                padding: 0.5rem 0.25rem;
+            }
+
+            .member-name {
+                max-width: 100px;
+            }
+
+            .amount-display {
+                padding: 0.4rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .transaction-table {
+                font-size: 0.7rem;
+            }
+
+            .member-name {
+                max-width: 80px;
+            }
+        }
+
+        /* Loading and Success States */
+        .loading-spinner {
+            display: none;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-flash {
+            background-color: #d4edda !important;
+            border-color: #c3e6cb !important;
+            animation: flash 0.5s ease-in-out;
+        }
+
+        @keyframes flash {
+            0% { background-color: #d4edda; }
+            50% { background-color: #28a745; }
+            100% { background-color: #d4edda; }
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid px-3 py-3">
+        <!-- Transaction Header -->
+        <div class="transaction-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-cash-coin me-2"></i>
+                        Transaction Recording
+                    </h2>
+                    <p class="mb-0 opacity-75">Record daily payments - {{ new Date().toLocaleDateString() }}</p>
+                </div>
+                <div>
+                    <a href="#" class="btn btn-light btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Statistics -->
+        <div class="transaction-stats">
+            <div class="transaction-stat-card today">
+                <div class="stat-number" id="todayTotal">TZS 0</div>
+                <div class="stat-label">Today's Collection</div>
+            </div>
+            <div class="transaction-stat-card">
+                <div class="stat-number" id="totalMembers">0</div>
+                <div class="stat-label">Total Members</div>
+            </div>
+            <div class="transaction-stat-card pending">
+                <div class="stat-number" id="pendingMembers">0</div>
+                <div class="stat-label">Pending Payments</div>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="transaction-search">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label small">Search Members</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="memberSearch" placeholder="Enter member name...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Filter Status</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Members</option>
+                        <option value="pending">Pending Payment</option>
+                        <option value="complete">Complete</option>
+                        <option value="exceeded">Exceeded</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-outline-secondary w-100" id="clearFilters">
+                        <i class="bi bi-x-lg me-1"></i>Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Table -->
+        <div class="card">
+            <div class="card-header py-2 bg-light">
+                <h6 class="card-title mb-0 d-flex align-items-center">
+                    <i class="bi bi-table me-2"></i>
+                    <span>Member Transactions</span>
+                    <span class="badge bg-primary ms-2" id="memberCount">0</span>
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 transaction-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th style="width: 150px;">Member Name</th>
+                                <th style="width: 100px;">Current Paid</th>
+                                <th style="width: 100px;">Today's Payment</th>
+                                <th style="width: 100px;">Remaining</th>
+                                <th style="width: 80px;">Status</th>
+                                <th style="width: 80px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody">
+                            <!-- Dynamic content will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="text-center py-4 d-none" id="loadingState">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading member data...</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sample data - replace with actual API calls
+        let membersData = [
+            {
+                id: 1,
+                name: "John Doe",
+                pledge: 70000,
+                paid_total: 45000,
+                today_payment: 0,
+                remaining: 25000,
+                is_complete: false,
+                has_exceeded: false
+            },
+            {
+                id: 2,
+                name: "Jane Smith",
+                pledge: 70000,
+                paid_total: 70000,
+                today_payment: 0,
+                remaining: 0,
+                is_complete: true,
+                has_exceeded: false
+            },
+            {
+                id: 3,
+                name: "Mike Johnson",
+                pledge: 70000,
+                paid_total: 75000,
+                today_payment: 0,
+                remaining: -5000,
+                is_complete: true,
+                has_exceeded: true
+            },
+            {
+                id: 4,
+                name: "Sarah Wilson",
+                pledge: 70000,
+                paid_total: 20000,
+                today_payment: 0,
+                remaining: 50000,
+                is_complete: false,
+                has_exceeded: false
+            }
+        ];
+
+        let filteredData = [...membersData];
+        let todaysTotalCollection = 0;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTransactionData();
+            setupEventListeners();
+            updateStatistics();
+        });
+
+        function loadTransactionData() {
+            const tbody = document.getElementById('transactionTableBody');
+            tbody.innerHTML = '';
+
+            filteredData.forEach((member, index) => {
+                const row = createTransactionRow(member, index + 1);
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('memberCount').textContent = filteredData.length;
+        }
+
+        function createTransactionRow(member, rowNumber) {
+            const row = document.createElement('tr');
+            row.setAttribute('data-member-id', member.id);
+
+            const remainingClass = member.remaining > 0 ? 'positive' : 
+                                 member.remaining < 0 ? 'negative' : 'zero';
+
+            const statusBadge = member.has_exceeded ? 'Exceeded' :
+                               member.is_complete ? 'Complete' : 'Pending';
+
+            const statusClass = member.has_exceeded ? 'bg-info' :
+                               member.is_complete ? 'bg-success' : 'bg-warning';
+
+            row.innerHTML = `
+                <td class="text-center">${rowNumber}</td>
+                <td>
+                    <div class="member-name" title="${member.name}">
+                        ${member.name}
+                    </div>
+                </td>
+                <td class="text-center">
+                    <div class="fw-bold text-success">
+                        TZS ${member.paid_total.toLocaleString()}
+                    </div>
+                </td>
+                <td class="text-center">
+                    <div class="amount-display" data-member-id="${member.id}" data-current-amount="${member.today_payment}">
+                        <span class="amount-text">TZS ${member.today_payment.toLocaleString()}</span>
+                        <input type="number" class="amount-input d-none" value="${member.today_payment}" min="0" step="1000">
+                    </div>
+                </td>
+                <td class="text-center">
+                    <div class="remaining-amount ${remainingClass}">
+                        TZS ${Math.abs(member.remaining).toLocaleString()}
+                        ${member.remaining < 0 ? '(Excess)' : ''}
+                    </div>
+                </td>
+                <td class="text-center">
+                    <span class="badge ${statusClass}">${statusBadge}</span>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-primary btn-sm save-btn" data-member-id="${member.id}" disabled>
+                        <span class="loading-spinner"></span>
+                        <i class="bi bi-check"></i>
+                    </button>
+                </td>
+            `;
+
+            return row;
+        }
+
+        function setupEventListeners() {
+            // Amount display click to edit
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.amount-display')) {
+                    const amountDisplay = e.target.closest('.amount-display');
+                    if (!amountDisplay.classList.contains('editing')) {
+                        startEditing(amountDisplay);
+                    }
+                }
+            });
+
+            // Save button click
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.save-btn')) {
+                    const saveBtn = e.target.closest('.save-btn');
+                    const memberId = parseInt(saveBtn.getAttribute('data-member-id'));
+                    saveTransaction(memberId);
+                }
+            });
+
+            // Search functionality
+            document.getElementById('memberSearch').addEventListener('input', function() {
+                filterMembers();
+            });
+
+            // Status filter
+            document.getElementById('statusFilter').addEventListener('change', function() {
+                filterMembers();
+            });
+
+            // Clear filters
+            document.getElementById('clearFilters').addEventListener('click', function() {
+                document.getElementById('memberSearch').value = '';
+                document.getElementById('statusFilter').value = '';
+                filterMembers();
+            });
+
+            // Handle input changes
+            document.addEventListener('input', function(e) {
+                if (e.target.classList.contains('amount-input')) {
+                    const memberId = parseInt(e.target.closest('.amount-display').getAttribute('data-member-id'));
+                    const saveBtn = document.querySelector(`.save-btn[data-member-id="${memberId}"]`);
+                    saveBtn.disabled = false;
+                }
+            });
+
+            // Handle Enter key and Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.target.classList.contains('amount-input')) {
+                    if (e.key === 'Enter') {
+                        const memberId = parseInt(e.target.closest('.amount-display').getAttribute('data-member-id'));
+                        saveTransaction(memberId);
+                    } else if (e.key === 'Escape') {
+                        cancelEditing(e.target.closest('.amount-display'));
+                    }
+                }
+            });
+        }
+
+        function startEditing(amountDisplay) {
+            const amountText = amountDisplay.querySelector('.amount-text');
+            const amountInput = amountDisplay.querySelector('.amount-input');
+            const currentAmount = parseInt(amountDisplay.getAttribute('data-current-amount'));
+
+            amountText.classList.add('d-none');
+            amountInput.classList.remove('d-none');
+            amountDisplay.classList.add('editing');
+            
+            amountInput.value = currentAmount;
+            amountInput.focus();
+            amountInput.select();
+        }
+
+        function cancelEditing(amountDisplay) {
+            const amountText = amountDisplay.querySelector('.amount-text');
+            const amountInput = amountDisplay.querySelector('.amount-input');
+            const currentAmount = parseInt(amountDisplay.getAttribute('data-current-amount'));
+
+            amountText.classList.remove('d-none');
+            amountInput.classList.add('d-none');
+            amountDisplay.classList.remove('editing');
+            
+            amountInput.value = currentAmount;
+        }
+
+        function saveTransaction(memberId) {
+            const amountDisplay = document.querySelector(`.amount-display[data-member-id="${memberId}"]`);
+            const amountInput = amountDisplay.querySelector('.amount-input');
+            const saveBtn = document.querySelector(`.save-btn[data-member-id="${memberId}"]`);
+            const spinner = saveBtn.querySelector('.loading-spinner');
+            
+            const newAmount = parseInt(amountInput.value) || 0;
+            const currentAmount = parseInt(amountDisplay.getAttribute('data-current-amount'));
+
+            // Show loading state
+            saveBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+
+            // Simulate API call
+            setTimeout(() => {
+                // Update member data
+                const member = membersData.find(m => m.id === memberId);
+                if (member) {
+                    const difference = newAmount - member.today_payment;
+                    member.today_payment = newAmount;
+                    member.paid_total += difference;
+                    member.remaining = member.pledge - member.paid_total;
+                    member.is_complete = member.remaining <= 0;
+                    member.has_exceeded = member.remaining < 0;
+
+                    // Update today's total
+                    todaysTotalCollection += difference;
+                }
+
+                // Update display
+                updateMemberRow(memberId);
+                updateStatistics();
+
+                // Show success state
+                spinner.style.display = 'none';
+                saveBtn.innerHTML = '<i class="bi bi-check-circle text-success"></i>';
+                
+                // Add success flash effect
+                const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
+                row.classList.add('success-flash');
+                
+                setTimeout(() => {
+                    saveBtn.innerHTML = '<i class="bi bi-check"></i>';
+                    saveBtn.disabled = true;
+                    row.classList.remove('success-flash');
+                }, 1500);
+
+                // Update amount display
+                amountDisplay.setAttribute('data-current-amount', newAmount);
+                const amountText = amountDisplay.querySelector('.amount-text');
+                amountText.textContent = `TZS ${newAmount.toLocaleString()}`;
+                
+                cancelEditing(amountDisplay);
+            }, 1000);
+        }
+
+        function updateMemberRow(memberId) {
+            const member = membersData.find(m => m.id === memberId);
+            const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
+            
+            // Update paid total
+            const paidCell = row.querySelector('td:nth-child(3) div');
+            paidCell.textContent = `TZS ${member.paid_total.toLocaleString()}`;
+            
+            // Update remaining
+            const remainingCell = row.querySelector('.remaining-amount');
+            remainingCell.className = 'remaining-amount ' + 
+                (member.remaining > 0 ? 'positive' : member.remaining < 0 ? 'negative' : 'zero');
+            remainingCell.textContent = `TZS ${Math.abs(member.remaining).toLocaleString()}${member.remaining < 0 ? ' (Excess)' : ''}`;
+            
+            // Update status
+            const statusBadge = row.querySelector('.badge');
+            const statusText = member.has_exceeded ? 'Exceeded' : member.is_complete ? 'Complete' : 'Pending';
+            const statusClass = member.has_exceeded ? 'bg-info' : member.is_complete ? 'bg-success' : 'bg-warning';
+            statusBadge.className = `badge ${statusClass}`;
+            statusBadge.textContent = statusText;
+        }
+
+        function updateStatistics() {
+            document.getElementById('todayTotal').textContent = `TZS ${todaysTotalCollection.toLocaleString()}`;
+            document.getElementById('totalMembers').textContent = membersData.length;
+            
+            const pendingCount = membersData.filter(m => !m.is_complete).length;
+            document.getElementById('pendingMembers').textContent = pendingCount;
+        }
+
+        function filterMembers() {
+            const searchTerm = document.getElementById('memberSearch').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            filteredData = membersData.filter(member => {
+                const matchesSearch = member.name.toLowerCase().includes(searchTerm);
+                
+                let matchesStatus = true;
+                if (statusFilter === 'pending') {
+                    matchesStatus = !member.is_complete;
+                } else if (statusFilter === 'complete') {
+                    matchesStatus = member.is_complete && !member.has_exceeded;
+                } else if (statusFilter === 'exceeded') {
+                    matchesStatus = member.has_exceeded;
+                }
+
+                return matchesSearch && matchesStatus;
+            });
+
+            loadTransactionData();
+        }
+    </script>
+</body>
+</html>

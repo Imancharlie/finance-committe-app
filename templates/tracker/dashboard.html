@@ -1,0 +1,743 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Mission Offering Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Horizontal compact stats cards - IMPROVED */
+.horizontal-stats {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    width: 100%;
+    flex-wrap: nowrap; /* Keep cards in one row */
+    overflow-x: auto; /* Allow horizontal scrolling on very small screens */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding-bottom: 0.5rem;
+}
+
+.horizontal-stats .stat-card {
+    flex: 1; /* Equal width distribution */
+    min-width: 100px; /* Minimum readable size */
+    max-width: none; /* Remove max-width restriction */
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 8px;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.horizontal-stats .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0; /* Prevent overflow */
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #6c757d;
+    font-weight: 500;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #343a40;
+    line-height: 1;
+    word-break: break-word;
+}
+
+.stat-icon {
+    font-size: 1.8rem;
+    opacity: 0.7;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+.stat-card.total-card .stat-icon { color: #28a745; }
+.stat-card.progress-card .stat-icon { color: #ffc107; }
+.stat-card.complete-card .stat-icon { color: #17a2b8; }
+
+/* Progress bar for progress card */
+.progress-mini {
+    height: 3px;
+    background-color: rgba(255,193,7,0.2);
+    border-radius: 2px;
+    margin-top: 0.3rem;
+    overflow: hidden;
+    width: 100%;
+}
+
+.progress-mini .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #ffc107, #fd7e14);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Collapsible search section */
+.search-section {
+    margin-bottom: 1rem;
+}
+
+.search-trigger {
+    width: 100%;
+    background: white;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+    cursor: text;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-trigger:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.search-trigger i {
+    color: #6c757d;
+}
+
+.search-expanded {
+    background: white;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    display: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.search-expanded.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ultra-compact table */
+.compact-table {
+    font-size: 0.75rem;
+}
+
+.compact-table th,
+.compact-table td {
+    padding: 0.4rem 0.3rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.compact-table .form-control-sm {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.4rem;
+    height: auto;
+    min-width: 70px;
+    max-width: 90px;
+}
+
+.compact-table .amount-display {
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+.compact-table .status-badge {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.4rem;
+    white-space: nowrap;
+    border-radius: 12px;
+}
+
+.compact-table .member-name-link {
+    font-size: 0.75rem;
+    font-weight: 500;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    text-decoration: none;
+}
+
+.compact-table .member-name-link:hover {
+    text-decoration: underline;
+}
+
+/* Table header styling */
+.compact-table thead th {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.5rem 0.3rem;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+    text-align: center;
+}
+
+/* Status badge colors */
+.status-complete { background-color: #d4edda; color: #155724; }
+.status-incomplete { background-color: #fff3cd; color: #856404; }
+.status-not-started { background-color: #f8d7da; color: #721c24; }
+.status-exceeded { background-color: #d1ecf1; color: #0c5460; }
+
+/* Compact save button */
+.compact-table .save-btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.65rem;
+    border-radius: 4px;
+}
+
+/* Compact header */
+.compact-header h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+.compact-header p {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.compact-header .btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+}
+
+/* Responsive adjustments - IMPROVED */
+@media (max-width: 768px) {
+    .horizontal-stats {
+        gap: 0.4rem;
+    }
+    
+    .horizontal-stats .stat-card {
+        min-height: 55px;
+        padding: 0.6rem;
+        min-width: 90px; /* Slightly smaller minimum width */
+    }
+    
+    .stat-value {
+        font-size: 1rem;
+    }
+    
+    .stat-icon {
+        font-size: 1.6rem;
+    }
+    
+    .stat-label {
+        font-size: 0.65rem;
+    }
+    
+    .compact-table {
+        font-size: 0.7rem;
+    }
+    
+    .compact-table .member-name-link {
+        max-width: 100px;
+    }
+}
+
+@media (max-width: 576px) {
+    .horizontal-stats {
+        gap: 0.3rem;
+    }
+    
+    .horizontal-stats .stat-card {
+        min-height: 50px;
+        padding: 0.5rem;
+        min-width: 80px;
+    }
+    
+    .stat-value {
+        font-size: 0.9rem;
+    }
+    
+    .stat-label {
+        font-size: 0.6rem;
+        margin-bottom: 0.1rem;
+    }
+    
+    .stat-icon {
+        font-size: 1.4rem;
+        margin-left: 0.3rem;
+    }
+    
+    .compact-table {
+        font-size: 0.65rem;
+    }
+    
+    .compact-table .member-name-link {
+        max-width: 80px;
+    }
+    
+    .compact-table .form-control-sm {
+        min-width: 60px;
+        max-width: 80px;
+    }
+}
+
+/* Extra small screens - maintains horizontal layout */
+@media (max-width: 480px) {
+    .horizontal-stats .stat-card {
+        min-width: 70px;
+        padding: 0.4rem;
+    }
+    
+    .stat-value {
+        font-size: 0.8rem;
+    }
+    
+    .stat-label {
+        font-size: 0.55rem;
+    }
+    
+    .stat-icon {
+        font-size: 1.2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Compact Header -->
+<div class="d-flex justify-content-between align-items-center mb-3 compact-header">
+    <div>
+        <h1 class="mb-1">Mission Dashboard</h1>
+        <p class="mb-0">Track contributions for Mlali Village mission</p>
+    </div>
+    <div class="btn-group">
+        <a class="btn btn-primary btn-sm" href="{% url 'tracker:daily_collection' %}">
+            <i class="bi bi-cash-coin me-1"></i>Daily Collection
+        </a>
+    </div>
+</div>
+
+<!-- Horizontal Statistics Cards -->
+<div class="horizontal-stats">
+    <div class="stat-card total-card">
+        <div class="stat-content">
+            <div class="stat-label">Total Collected</div>
+            <div class="stat-value">TZS {{ total_collected|floatformat:0|default:"0" }}</div>
+        </div>
+        <i class="bi bi-cash-stack stat-icon"></i>
+    </div>
+    
+    <div class="stat-card progress-card">
+        <div class="stat-content">
+            <div class="stat-label">Progress</div>
+            <div class="stat-value">{{ progress_percentage|floatformat:1|default:"0" }}%</div>
+            <div class="progress-mini">
+                <div class="progress-bar" style="width: {{ progress_percentage|default:0 }}%"></div>
+            </div>
+        </div>
+        <i class="bi bi-graph-up stat-icon"></i>
+    </div>
+    
+    <div class="stat-card complete-card">
+        <div class="stat-content">
+            <div class="stat-label">Complete</div>
+            <div class="stat-value">{{ complete_count|default:"0" }}</div>
+        </div>
+        <i class="bi bi-check-circle stat-icon"></i>
+    </div>
+</div>
+
+<!-- Collapsible Search Section -->
+<div class="search-section">
+    <div class="search-trigger" id="searchTrigger">
+        <i class="bi bi-search"></i>
+        <span>Search members...</span>
+    </div>
+    
+    <div class="search-expanded" id="searchExpanded">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small text-muted">Search Members</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="search" id="searchInput"
+                           value="{{ search_query }}" placeholder="Enter member name...">
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Filter Status</label>
+                <select class="form-select" name="filter">
+                    <option value="">All Members</option>
+                    <option value="incomplete" {% if filter_status == 'incomplete' %}selected{% endif %}>Incomplete</option>
+                    <option value="complete" {% if filter_status == 'complete' %}selected{% endif %}>Complete</option>
+                    <option value="pledged" {% if filter_status == 'pledged' %}selected{% endif %}>Pledged</option>
+                    <option value="not_started" {% if filter_status == 'not_started' %}selected{% endif %}>Not Started</option>
+                    <option value="exceeded" {% if filter_status == 'exceeded' %}selected{% endif %}>Exceeded</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel me-1"></i>Filter
+                </button>
+            </div>
+            
+            <div class="col-md-2">
+                <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-x-lg me-1"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Compact Members Table -->
+<div class="card">
+    <div class="card-header py-2 bg-light">
+        <h6 class="card-title mb-0 d-flex align-items-center">
+            <i class="bi bi-people me-2"></i>
+            <span>Members ({{ members|length }})</span>
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 compact-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">#</th>
+                        <th style="width: 120px;">Name</th>
+                        <th style="width: 80px;">Paid</th>
+                        <th style="width: 80px;">Remaining</th>
+                        <th style="width: 90px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if members %}
+                        {% for member in members %}
+                        <tr data-member-id="{{ member.id }}">
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'tracker:member_detail' member.id %}" class="member-name-link" title="{{ member.name }}">
+                                    {{ member.name }}
+                                </a>
+                            </td>
+                            <td class="text-center fw-bold text-success">
+                                {{ member.paid_total|floatformat:0 }}
+                            </td>
+                            
+                            <td class="remaining-display text-center">
+                                <span class="amount-display {% if member.remaining < 0 %}text-success fw-bold{% elif member.remaining > 0 %}text-warning{% endif %}">
+                                    {{ member.remaining|floatformat:0 }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="status-badge 
+                                    {% if member.has_exceeded %}status-exceeded{% elif member.is_complete %}status-complete{% elif member.is_incomplete %}status-incomplete{% else %}status-not-started{% endif %}">
+                                    {% if member.has_exceeded %}⬆ Exceeded
+                                    {% elif member.is_complete %}✓ Complete
+                                    {% elif member.is_incomplete %}⚠ Incomplete
+                                    {% else %}✗ Not Started{% endif %}
+                                </span>
+                            </td>
+                           
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="bi bi-exclamation-triangle mb-2" style="font-size: 2rem; color: #ffc107;"></i>
+                                    <p class="mb-2">No members Available for the category</p>
+                                    <p class="small mb-3">if they were supposed to be there contact <a href="tel:+255614021404"> <strong>administrator</strong></a></p>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="location.reload()">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Compact Pagination -->
+{% if page_obj and page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-3">
+    <nav>
+        <ul class="pagination pagination-sm">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% with ''|center:page_obj.paginator.num_pages as range %}
+                {% for _ in range %}
+                    {% with forloop.counter as num %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endwith %}
+                {% endfor %}
+            {% endwith %}
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- Quick Add Member Modal -->
+<div class="modal fade" id="quickAddModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickAddForm">
+                    <div class="mb-3">
+                        <label for="quick_name" class="form-label">Full Name *</label>
+                        <input type="text" class="form-control" id="quick_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quick_pledge" class="form-label">Pledge Amount (TZS)</label>
+                        <input type="number" class="form-control" id="quick_pledge" value="70000" min="0" step="1000">
+                        <small class="form-text text-muted">Default: 70,000 TZS</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="quickAddBtn">
+                    <span class="loading-spinner"></span>
+                    Add Member
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Search section toggle
+    $('#searchTrigger').on('click', function() {
+        const $expanded = $('#searchExpanded');
+        const $trigger = $(this);
+        
+        if ($expanded.hasClass('show')) {
+            $expanded.removeClass('show');
+            $trigger.find('span').text('Search members...');
+        } else {
+            $expanded.addClass('show');
+            $trigger.find('span').text('Hide search options');
+            // Focus on search input
+            setTimeout(() => {
+                $('#searchInput').focus();
+            }, 300);
+        }
+    });
+    
+    // Close search when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.search-section').length) {
+            $('#searchExpanded').removeClass('show');
+            $('#searchTrigger').find('span').text('Search members...');
+        }
+    });
+    
+    // Auto-save on input change (with debounce)
+    let saveTimeout;
+    $('.pledge-input, .paid-input').on('input', function() {
+        clearTimeout(saveTimeout);
+        const $this = $(this);
+        const memberId = $this.data('member-id');
+        const field = $this.data('field');
+        const value = $this.val();
+        
+        saveTimeout = setTimeout(function() {
+            updateMember(memberId, field, value);
+        }, 1000);
+    });
+    
+    // Manual save button
+    $('.save-btn').on('click', function() {
+        const memberId = $(this).data('member-id');
+        const $row = $(this).closest('tr');
+        const pledge = $row.find('.pledge-input').val();
+        const paid = $row.find('.paid-input').val();
+        
+        updateMember(memberId, 'pledge', pledge);
+        updateMember(memberId, 'paid_total', paid);
+    });
+    
+    // Quick add member
+    $('#quickAddBtn').on('click', function() {
+        const $btn = $(this);
+        const $spinner = $btn.find('.loading-spinner');
+        const name = $('#quick_name').val();
+        const pledge = $('#quick_pledge').val();
+        
+        if (!name) {
+            alert('Please enter a name');
+            return;
+        }
+        
+        $btn.prop('disabled', true);
+        $spinner.show();
+        
+        $.ajax({
+            url: '{% url "tracker:add_member_ajax" %}',
+            method: 'POST',
+            data: JSON.stringify({
+                name: name,
+                pledge: pledge
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function() {
+                alert('An error occurred. Please try again.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false);
+                $spinner.hide();
+            }
+        });
+    });
+    
+    function updateMember(memberId, field, value) {
+        const $row = $(`tr[data-member-id="${memberId}"]`);
+        const $saveBtn = $row.find('.save-btn');
+        
+        // Show loading state
+        $saveBtn.prop('disabled', true);
+        $saveBtn.html('<i class="bi bi-hourglass-split"></i>');
+        
+        $.ajax({
+            url: '{% url "tracker:update_member_ajax" %}',
+            method: 'POST',
+            data: JSON.stringify({
+                member_id: memberId,
+                field: field,
+                value: value
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    // Update display values
+                    $row.find('.pledge-input').val(response.pledge);
+                    $row.find('.paid-input').val(response.paid_total);
+                    
+                    // Update remaining amount with color coding
+                    const $remainingDisplay = $row.find('.remaining-display .amount-display');
+                    $remainingDisplay.text(response.remaining.toLocaleString());
+                    $remainingDisplay.removeClass('text-success text-warning fw-bold');
+                    if (response.remaining < 0) {
+                        $remainingDisplay.addClass('text-success fw-bold');
+                    } else if (response.remaining > 0) {
+                        $remainingDisplay.addClass('text-warning');
+                    }
+                    
+                    // Update status badge
+                    const $statusBadge = $row.find('.status-badge');
+                    $statusBadge.removeClass('status-complete status-incomplete status-not-started status-exceeded');
+                    
+                    if (response.has_exceeded) {
+                        $statusBadge.addClass('status-exceeded').text('⬆ Exceeded');
+                    } else if (response.is_complete) {
+                        $statusBadge.addClass('status-complete').text('✓ Complete');
+                    } else if (response.is_incomplete) {
+                        $statusBadge.addClass('status-incomplete').text('⚠ Incomplete');
+                    } else {
+                        $statusBadge.addClass('status-not-started').text('✗ Not Started');
+                    }
+                    
+                    // Show success feedback
+                    $saveBtn.html('<i class="bi bi-check-circle text-success"></i>');
+                    setTimeout(function() {
+                        $saveBtn.html('<i class="bi bi-check"></i>');
+                    }, 2000);
+                } else {
+                    alert('Error: ' + response.error);
+                    $saveBtn.html('<i class="bi bi-x-circle text-danger"></i>');
+                    setTimeout(function() {
+                        $saveBtn.html('<i class="bi bi-check"></i>');
+                    }, 2000);
+                }
+            },
+            error: function() {
+                alert('An error occurred. Please try again.');
+                $saveBtn.html('<i class="bi bi-x-circle text-danger"></i>');
+                setTimeout(function() {
+                    $saveBtn.html('<i class="bi bi-check"></i>');
+                }, 2000);
+            },
+            complete: function() {
+                $saveBtn.prop('disabled', false);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

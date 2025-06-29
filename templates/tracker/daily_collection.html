@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+
+{% block title %}Daily Collection - Mission Offering Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Ultra-compact stats cards */
+    .compact-stats .card {
+        border-radius: 6px;
+        padding: 0.25rem;
+    }
+    
+    .compact-stats .card-body {
+        padding: 0.5rem;
+    }
+    
+    .compact-stats .card-title {
+        font-size: 0.9rem;
+        margin-bottom: 0.2rem;
+    }
+    
+    .compact-stats .card-subtitle {
+        font-size: 0.65rem;
+        margin-bottom: 0.2rem;
+    }
+    
+    .compact-stats .bi {
+        font-size: 1.2rem;
+    }
+    
+    /* Ultra-compact table */
+    .compact-table {
+        font-size: 0.7rem;
+    }
+    
+    .compact-table th,
+    .compact-table td {
+        padding: 0.3rem 0.2rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .compact-table .form-control-sm {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.3rem;
+        height: auto;
+        min-width: 60px;
+        max-width: 80px;
+    }
+    
+    .compact-table .amount-display {
+        font-size: 0.65rem;
+        white-space: nowrap;
+    }
+    
+    .compact-table .status-badge {
+        font-size: 0.55rem;
+        padding: 0.1rem 0.3rem;
+        white-space: nowrap;
+    }
+    
+    .compact-table .member-name-link {
+        font-size: 0.7rem;
+        font-weight: 500;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+    }
+    
+    /* Payment input styling */
+    .payment-input {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+        font-weight: 500;
+    }
+    
+    .payment-input:focus {
+        background-color: #fff;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+    }
+    
+    /* Success message */
+    .success-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        background: linear-gradient(135deg, #059669, #047857);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        max-width: 300px;
+    }
+    
+    .success-message.show {
+        transform: translateX(0);
+    }
+    
+    .success-message.hide {
+        transform: translateX(100%);
+    }
+    
+    /* Compact search form */
+    .compact-search .form-control,
+    .compact-search .form-select {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+    }
+    
+    .compact-search .btn {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .compact-stats .card-title {
+            font-size: 0.8rem;
+        }
+        
+        .compact-stats .card-subtitle {
+            font-size: 0.6rem;
+        }
+        
+        .compact-table {
+            font-size: 0.65rem;
+        }
+        
+        .compact-table th,
+        .compact-table td {
+            padding: 0.25rem 0.15rem;
+        }
+        
+        .compact-table .form-control-sm {
+            font-size: 0.6rem;
+            padding: 0.15rem 0.25rem;
+            min-width: 50px;
+            max-width: 70px;
+        }
+        
+        .compact-table .amount-display {
+            font-size: 0.6rem;
+        }
+        
+        .compact-table .status-badge {
+            font-size: 0.5rem;
+            padding: 0.08rem 0.25rem;
+        }
+        
+        .compact-table .member-name-link {
+            font-size: 0.65rem;
+            max-width: 80px;
+        }
+        
+        .success-message {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .compact-stats .card-body {
+            padding: 0.4rem;
+        }
+        
+        .compact-stats .card-title {
+            font-size: 0.75rem;
+        }
+        
+        .compact-stats .bi {
+            font-size: 1rem;
+        }
+        
+        .compact-table {
+            font-size: 0.6rem;
+        }
+        
+        .compact-table .form-control-sm {
+            min-width: 45px;
+            max-width: 65px;
+        }
+        
+        .compact-table .member-name-link {
+            max-width: 70px;
+        }
+    }
+    
+    /* Progress bar in compact view */
+    .compact-progress {
+        height: 6px;
+        margin-top: 0.2rem;
+    }
+    
+    /* Table header styling */
+    .compact-table thead th {
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 0.4rem 0.2rem;
+        background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+        color: white;
+        border: none;
+    }
+    
+    /* Reduce table row height */
+    .compact-table tbody tr {
+        height: 32px;
+    }
+    
+    /* Compact save button */
+    .compact-table .save-btn {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.6rem;
+    }
+    
+    /* Compact header */
+    .compact-header h1 {
+        font-size: 1.2rem;
+    }
+    
+    .compact-header p {
+        font-size: 0.75rem;
+    }
+    
+    .compact-header .btn {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Compact Header -->
+<div class="d-flex justify-content-between align-items-center mb-2 compact-header">
+    <div>
+        <h1 class="h5 mb-1">Daily Collection</h1>
+        <p class="text-muted mb-0">Record today's payments - {{ today|date:"F d, Y" }}</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-house me-1"></i>Dashboard
+        </a>
+        <a href="{% url 'tracker:admin_log' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-journal-text me-1"></i>Log
+        </a>
+    </div>
+</div>
+
+<!-- Compact Search and Filters -->
+<div class="card mb-2">
+    <div class="card-body py-1 compact-search">
+        <form method="get" class="row g-1 align-items-end">
+            <div class="col-md-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="search" 
+                           value="{{ search_query }}" placeholder="Search members...">
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" name="filter">
+                    <option value="">All Members</option>
+                    <option value="incomplete" {% if filter_status == 'incomplete' %}selected{% endif %}>Incomplete</option>
+                    <option value="complete" {% if filter_status == 'complete' %}selected{% endif %}>Complete</option>
+                    <option value="pledged" {% if filter_status == 'pledged' %}selected{% endif %}>Pledged</option>
+                    <option value="not_started" {% if filter_status == 'not_started' %}selected{% endif %}>Not Started</option>
+                    <option value="exceeded" {% if filter_status == 'exceeded' %}selected{% endif %}>Exceeded</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+            </div>
+            
+            <div class="col-md-2">
+                <a href="{% url 'tracker:daily_collection' %}" class="btn btn-outline-secondary btn-sm w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Compact Members Table -->
+<div class="card">
+    <div class="card-header py-1">
+        <h6 class="card-title mb-0" style="font-size: 0.8rem;">
+            <i class="bi bi-people me-1"></i>Members ({{ page_obj.paginator.count|default:members|length|default:0 }})
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 compact-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30px;">#</th>
+                        <th style="width: 100px;">Name</th>
+                        <th style="width: 80px;">Currently Paid</th>
+                        <th style="width: 80px;">Remaining</th>
+                        <th style="width: 80px;">Today's Payment</th>
+                        <th style="width: 40px;">Save</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if members %}
+                        {% for member in members %}
+                        <tr data-member-id="{{ member.id }}">
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'tracker:member_detail' member.id %}" class="member-name-link" title="{{ member.name }}">
+                                    {{ member.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="amount-display">
+                                    {{ member.paid_total|floatformat:0 }}
+                                </span>
+                            </td>
+                            <td class="remaining-display">
+                                <span class="amount-display {% if member.remaining < 0 %}text-success{% elif member.remaining > 0 %}text-warning{% endif %}">
+                                    {{ member.remaining|floatformat:0 }}
+                                </span>
+                            </td>
+                            <td>
+                                <input type="number" class="form-control form-control-sm payment-input" 
+                                       placeholder="0" min="0" step="1000" 
+                                       data-member-id="{{ member.id }}">
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-outline-success btn-sm save-btn" 
+                                        data-member-id="{{ member.id }}" title="Save Payment">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-2">
+                                <div class="text-muted">
+                                    <i class="bi bi-exclamation-triangle mb-2" style="font-size: 2rem; color: #ffc107;"></i>
+                                    <p class="mb-2">No members Available for the category</p>
+                                    <p class="small mb-3">if they were supposed to be there contact <a href="tel:+255614021404"> <strong>administrator</strong></a></p>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="location.reload()">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Compact Pagination -->
+{% if page_obj and page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-2">
+    <nav>
+        <ul class="pagination pagination-sm">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% with ''|center:page_obj.paginator.num_pages as range %}
+                {% for _ in range %}
+                    {% with forloop.counter as num %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endwith %}
+                {% endfor %}
+            {% endwith %}
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- Success Message Container -->
+<div id="successMessage" class="success-message" style="display: none;">
+    <i class="bi bi-check-circle me-2"></i>
+    <span id="successText"></span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Function to show success message
+    function showSuccessMessage(message) {
+        const successMsg = $('#successMessage');
+        const successText = $('#successText');
+        
+        successText.text(message);
+        successMsg.show();
+        
+        // Animate in
+        setTimeout(() => {
+            successMsg.addClass('show');
+        }, 10);
+        
+        // Auto hide after 3 seconds
+        setTimeout(() => {
+            successMsg.removeClass('show').addClass('hide');
+            setTimeout(() => {
+                successMsg.hide().removeClass('hide');
+            }, 300);
+        }, 3000);
+    }
+    
+    // Save payment button click
+    $('.save-btn').on('click', function() {
+        const $btn = $(this);
+        const $row = $btn.closest('tr');
+        const memberId = $btn.data('member-id');
+        const $paymentInput = $row.find('.payment-input');
+        const paymentAmount = $paymentInput.val();
+        
+        if (!paymentAmount || paymentAmount <= 0) {
+            showSuccessMessage('Please enter a valid payment amount');
+            return;
+        }
+        
+        // Show loading state
+        $btn.prop('disabled', true);
+        $btn.html('<i class="bi bi-hourglass-split"></i>');
+        
+        $.ajax({
+            url: '{% url "tracker:record_daily_payment_ajax" %}',
+            method: 'POST',
+            data: JSON.stringify({
+                member_id: memberId,
+                payment_amount: paymentAmount,
+                note: 'Daily collection payment'
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    // Clear the input
+                    $paymentInput.val('');
+                    
+                    // Update the currently paid amount
+                    $row.find('.amount-display').first().text(response.member.paid_total.toLocaleString());
+                    
+                    // Update remaining amount
+                    const $remainingDisplay = $row.find('.remaining-display .amount-display');
+                    $remainingDisplay.text(response.member.remaining.toLocaleString());
+                    $remainingDisplay.removeClass('text-success text-warning');
+                    if (response.member.remaining < 0) {
+                        $remainingDisplay.addClass('text-success');
+                    } else if (response.member.remaining > 0) {
+                        $remainingDisplay.addClass('text-warning');
+                    }
+                    
+                    // Show success message
+                    showSuccessMessage(response.message);
+                    
+                    // Show success feedback on button
+                    $btn.html('<i class="bi bi-check-circle text-success"></i>');
+                    setTimeout(function() {
+                        $btn.html('<i class="bi bi-check"></i>');
+                    }, 2000);
+                } else {
+                    showSuccessMessage('Error: ' + response.error);
+                    $btn.html('<i class="bi bi-x-circle text-danger"></i>');
+                    setTimeout(function() {
+                        $btn.html('<i class="bi bi-check"></i>');
+                    }, 2000);
+                }
+            },
+            error: function() {
+                showSuccessMessage('An error occurred. Please try again.');
+                $btn.html('<i class="bi bi-x-circle text-danger"></i>');
+                setTimeout(function() {
+                    $btn.html('<i class="bi bi-check"></i>');
+                }, 2000);
+            },
+            complete: function() {
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+    
+    // Auto-save on Enter key
+    $('.payment-input').on('keypress', function(e) {
+        if (e.which === 13) { // Enter key
+            $(this).closest('tr').find('.save-btn').click();
+        }
+    });
+});
+</script>
+{% endblock %} 
