@@ -1,0 +1,980 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Members - Mission Offering Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Ultra-compact stats cards */
+    .compact-stats .card {
+        border-radius: 6px;
+        padding: 0.25rem;
+    }
+
+    .compact-stats .card-body {
+        padding: 0.5rem;
+    }
+
+    .compact-stats .card-title {
+        font-size: 0.9rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .compact-stats .card-subtitle {
+        font-size: 0.65rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .compact-stats .bi {
+        font-size: 1.2rem;
+    }
+
+    /* Ultra-compact table */
+    .compact-table {
+        font-size: 0.7rem;
+    }
+
+    .compact-table th,
+    .compact-table td {
+        padding: 0.3rem 0.2rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .compact-table .form-control-sm {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.3rem;
+        height: auto;
+        min-width: 80px;
+    }
+
+    .compact-table .form-select-sm {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.3rem;
+        height: auto;
+        min-width: 100px;
+    }
+
+    .compact-table .member-id {
+        font-size: 0.65rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .compact-table .status-badge {
+        font-size: 0.55rem;
+        padding: 0.1rem 0.3rem;
+        white-space: nowrap;
+    }
+
+    /* Edit input styling */
+    .edit-input {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        font-weight: 500;
+    }
+
+    .edit-input:focus {
+        background-color: #fff;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+    }
+
+    .edit-input.changed {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+    }
+
+    /* Read-only paid display */
+    .paid-display {
+        background-color: #e9ecef;
+        border-color: #ced4da;
+        color: #495057;
+        font-weight: 600;
+    }
+
+    /* Paid input for staff */
+    .paid-input {
+        background-color: #f0f8ff;
+        border-color: #007bff;
+        font-weight: 600;
+        color: #0056b3;
+    }
+
+    .paid-input:focus {
+        background-color: #fff;
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .paid-input.changed {
+        background-color: #d4edda;
+        border-color: #28a745;
+    }
+
+    /* Success message */
+    .success-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        background: linear-gradient(135deg, #059669, #047857);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        max-width: 300px;
+    }
+
+    .success-message.show {
+        transform: translateX(0);
+    }
+
+    .success-message.hide {
+        transform: translateX(100%);
+    }
+
+    /* Compact search form */
+    .compact-search .form-control,
+    .compact-search .form-select {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    .compact-search .btn {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    /* Status indicators */
+    .status-complete {
+        color: #28a745;
+        font-weight: 600;
+    }
+
+    .status-incomplete {
+        color: #ffc107;
+        font-weight: 600;
+    }
+
+    .status-not-started {
+        color: #dc3545;
+        font-weight: 600;
+    }
+
+    .status-exceeded {
+        color: #17a2b8;
+        font-weight: 600;
+    }
+
+    /* Smart filters */
+    .smart-filters {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 8px;
+        padding: 0.5rem;
+    }
+
+    .filter-badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-badge.active {
+        background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+        color: white;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .compact-stats .card-title {
+            font-size: 0.8rem;
+        }
+
+        .compact-stats .card-subtitle {
+            font-size: 0.6rem;
+        }
+
+        .compact-table {
+            font-size: 0.65rem;
+        }
+
+        .compact-table th,
+        .compact-table td {
+            padding: 0.25rem 0.15rem;
+        }
+
+        .compact-table .form-control-sm,
+        .compact-table .form-select-sm {
+            font-size: 0.6rem;
+            padding: 0.15rem 0.25rem;
+            min-width: 70px;
+        }
+
+        .compact-table .member-id {
+            font-size: 0.6rem;
+        }
+
+        .compact-table .status-badge {
+            font-size: 0.5rem;
+            padding: 0.08rem 0.25rem;
+        }
+
+        .success-message {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .compact-stats .card-body {
+            padding: 0.4rem;
+        }
+
+        .compact-stats .card-title {
+            font-size: 0.75rem;
+        }
+
+        .compact-stats .bi {
+            font-size: 1rem;
+        }
+
+        .compact-table {
+            font-size: 0.6rem;
+        }
+
+        .compact-table .form-control-sm,
+        .compact-table .form-select-sm {
+            min-width: 60px;
+        }
+    }
+
+    /* Progress bar in compact view */
+    .compact-progress {
+        height: 6px;
+        margin-top: 0.2rem;
+    }
+
+    /* Table header styling */
+    .compact-table thead th {
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 0.4rem 0.2rem;
+        background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+        color: white;
+        border: none;
+    }
+
+    /* Reduce table row height */
+    .compact-table tbody tr {
+        height: 40px;
+    }
+
+    /* Compact save button */
+    .compact-table .save-btn {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.6rem;
+    }
+
+    /* Compact header */
+    .compact-header h1 {
+        font-size: 1.2rem;
+    }
+
+    .compact-header p {
+        font-size: 0.75rem;
+    }
+
+    .compact-header .btn {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    /* Action buttons */
+    .action-buttons {
+        display: flex;
+        gap: 0.2rem;
+    }
+
+    .action-buttons .btn {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.6rem;
+    }
+
+    /* Row with changes indicator */
+    .row-changed {
+        background-color: #fff3cd;
+    }
+
+    /* Delete confirmation */
+    .delete-confirmation {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
+
+    .delete-confirmation .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    .delete-confirmation .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+
+    /* Amount input styling */
+    .amount-input {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+    }
+
+    /* Quick stats */
+    .quick-stats {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff, #f8f9fa);
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 0.5rem;
+        text-align: center;
+        min-width: 100px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .stat-card.active {
+        background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .stat-number {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Compact Header -->
+<div class="d-flex justify-content-between align-items-center mb-2 compact-header">
+    <div>
+        <h1 class="h5 mb-1">Edit Members</h1>
+        <p class="text-muted mb-0">Edit member details and track payments efficiently</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-house me-1"></i>Dashboard
+        </a>{% if can_edit %}
+        <a href="{% url 'tracker:daily_collection' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-collection me-1"></i>Collection
+        </a>{% endif %}
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+            <i class="bi bi-plus me-1"></i>Add Member
+        </button>
+    </div>
+</div>
+
+<!-- Quick Stats and Smart Filters -->
+<div class="quick-stats">
+    <div class="stat-card" data-filter="all">
+        <div class="stat-number">{{ total_members }}</div>
+        <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card" data-filter="complete">
+        <div class="stat-number">{{ completed_payments }}</div>
+        <div class="stat-label">Complete</div>
+    </div>
+    <div class="stat-card" data-filter="incomplete">
+        <div class="stat-number">{{ incomplete_payments }}</div>
+        <div class="stat-label">Incomplete</div>
+    </div>
+    <div class="stat-card" data-filter="not_started">
+        <div class="stat-number">{{ not_started_payments }}</div>
+        <div class="stat-label">Not Started</div>
+    </div>
+</div>
+
+<!-- Compact Search and Advanced Filters -->
+<div class="card mb-2">
+    <div class="card-body py-1 compact-search">
+        <div class="row g-1 align-items-end">
+            <div class="col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="searchMembers"
+                           placeholder="Search members..." value="{{ search_query }}">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="statusFilter">
+                    <option value="all">All Status</option>
+                    <option value="complete">Complete</option>
+                    <option value="incomplete">Incomplete</option>
+                    <option value="not_started">Not Started</option>
+                    <option value="exceeded">Exceeded</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">Below</span>
+                    <input type="number" class="form-control" id="amountFilter"
+                           placeholder="Amount" min="0" step="1000">
+                </div>
+            </div>
+
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="clearFilters">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compact Members Table -->
+<div class="card">
+    <div class="card-header py-1">
+        <h6 class="card-title mb-0" style="font-size: 0.8rem;">
+            <i class="bi bi-people me-1"></i>Members
+            (<span id="displayedCount">{{ members|length|default:0 }}</span>)
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 compact-table">
+                <thead>
+                <tr>
+                    <th style="width: 30px;">#</th>
+                    <th style="width: 150px;">Name</th>
+                    <th style="width: 130px;">Phone</th>
+                    <th style="width: 100px;">Year of Study</th>
+                    <th style="width: 100px;">Paid Amount</th>
+                    <th style="width: 100px;">Actions</th>
+                </tr>
+                </thead>
+
+                <tbody id="membersTableBody">
+                {% if members %}
+                    {% for member in members %}
+                    <tr data-member-id="{{ member.id }}" class="member-row"
+                        data-status="{% if member.is_complete %}complete{% elif member.is_incomplete %}incomplete{% elif member.not_started %}not_started{% elif member.has_exceeded %}exceeded{% else %}unknown{% endif %}"
+                        data-paid="{{ member.paid_total }}"
+                        data-name="{{ member.name|lower }}"
+                        data-phone="{{ member.phone|default:'' }}">
+                        <td>{{ forloop.counter }}</td>
+
+                        <td>
+                            <input type="text" class="form-control form-control-sm edit-input name-input"
+                                   value="{{ member.name }}" data-field="name" data-original="{{ member.name }}">
+                        </td>
+
+                        <td>
+                            <input type="tel" class="form-control form-control-sm edit-input phone-input"
+                                   value="{{ member.phone }}" data-field="phone_number" data-original="{{ member.phone }}">
+                        </td>
+
+                        <td>
+                            <input type="text" class="form-control form-control-sm edit-input year-input"
+                                   value="{{ member.year_of_study }}" data-field="year_of_study" data-original="{{ member.year_of_study }}">
+                        </td>
+
+                        <td>
+                            {% if can_edit %}
+                                <input type="number" class="form-control form-control-sm paid-input amount-input"
+                                       value="{{ member.paid_total }}" data-field="paid_total"
+                                       data-original="{{ member.paid_total }}" min="0" step="1000">
+                            {% else %}
+                                <input type="text" class="form-control form-control-sm paid-display amount-input"
+                                       value="{{ member.paid_total|floatformat:0 }}" readonly>
+                            {% endif %}
+                            <div class="mt-1">
+                                {% if member.is_complete %}
+                                    <small class="status-complete">✓ Complete</small>
+                                {% elif member.is_incomplete %}
+                                    <small class="status-incomplete">⚠ Incomplete</small>
+                                {% elif member.not_started %}
+                                    <small class="status-not-started">✗ Not Started</small>
+                                {% elif member.has_exceeded %}
+                                    <small class="status-exceeded">↗ Exceeded</small>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="action-buttons">
+                                <button type="button" class="btn btn-outline-success btn-sm save-btn"
+                                        data-member-id="{{ member.id }}" title="Save Changes">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                                {% if can_edit %}
+                                <button type="button" class="btn btn-outline-danger btn-sm delete-btn"
+                                        data-member-id="{{ member.id }}" title="Delete Member">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr id="noMembersRow">
+                        <td colspan="6" class="text-center py-3">
+                            <div class="text-muted">
+                                <i class="bi bi-people mb-2" style="font-size: 2rem; color: #6c757d;"></i>
+                                <p class="mb-2">No members found</p>
+                                <p class="small mb-3">Try adjusting your search criteria</p>
+                                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                                    <i class="bi bi-plus me-1"></i>Add First Member
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addMemberModalLabel">Add New Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addMemberForm">
+                    <div class="mb-3">
+                        <label for="newMemberName" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="newMemberName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newMemberPhone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="newMemberPhone" placeholder="e.g., +255712345678">
+                    </div>
+                    <div class="mb-3">
+                        <label for="newMemberYear" class="form-label">Year of Study</label>
+                        <select class="form-select" id="newMemberYear">
+                            <option value="">Select Year</option>
+                            <option value="1">Year 1</option>
+                            <option value="2">Year 2</option>
+                            <option value="3">Year 3</option>
+                            <option value="4">Year 4</option>
+                            <option value="5">Year 5</option>
+                        </select>
+                    </div>
+                    {% if can_edit %}
+                    <div class="mb-3">
+                        <label for="newMemberPaid" class="form-label">Initial Paid Amount</label>
+                        <input type="number" class="form-control" id="newMemberPaid" min="0" step="1000" value="0">
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveNewMember">Add Member</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Message Container -->
+<div id="successMessage" class="success-message" style="display: none;">
+    <i class="bi bi-check-circle me-2"></i>
+    <span id="successText"></span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let currentFilter = 'all';
+    let currentAmountFilter = null;
+    let currentSearchQuery = '';
+
+    // Function to show success message
+    function showSuccessMessage(message) {
+        const successMsg = $('#successMessage');
+        const successText = $('#successText');
+
+        successText.text(message);
+        successMsg.show();
+
+        // Animate in
+        setTimeout(() => {
+            successMsg.addClass('show');
+        }, 10);
+
+        // Auto hide after 3 seconds
+        setTimeout(() => {
+            successMsg.removeClass('show').addClass('hide');
+            setTimeout(() => {
+                successMsg.hide().removeClass('hide');
+            }, 300);
+        }, 3000);
+    }
+
+    // Function to filter members
+    function filterMembers() {
+        const rows = $('#membersTableBody tr.member-row');
+        let visibleCount = 0;
+
+        rows.each(function() {
+            const $row = $(this);
+            const status = $row.data('status');
+            const paid = parseFloat($row.data('paid')) || 0;
+            const name = $row.data('name');
+            const phone = $row.data('phone');
+
+            let showRow = true;
+
+            // Status filter
+            if (currentFilter !== 'all' && status !== currentFilter) {
+                showRow = false;
+            }
+
+            // Amount filter
+            if (currentAmountFilter !== null && paid >= currentAmountFilter) {
+                showRow = false;
+            }
+
+            // Search filter
+            if (currentSearchQuery &&
+                !name.includes(currentSearchQuery.toLowerCase()) &&
+                !phone.includes(currentSearchQuery)) {
+                showRow = false;
+            }
+
+            if (showRow) {
+                $row.show();
+                visibleCount++;
+            } else {
+                $row.hide();
+            }
+        });
+
+        // Update counter
+        $('#displayedCount').text(visibleCount);
+
+        // Show/hide no results message
+        if (visibleCount === 0 && rows.length > 0) {
+            $('#noMembersRow').show();
+        } else {
+            $('#noMembersRow').hide();
+        }
+    }
+
+    // Quick stats filter
+    $('.stat-card').on('click', function() {
+        const filter = $(this).data('filter');
+
+        // Update active state
+        $('.stat-card').removeClass('active');
+        $(this).addClass('active');
+
+        // Update filter
+        currentFilter = filter;
+        $('#statusFilter').val(filter);
+
+        filterMembers();
+    });
+
+    // Status filter dropdown
+    $('#statusFilter').on('change', function() {
+        currentFilter = $(this).val();
+
+        // Update stat cards
+        $('.stat-card').removeClass('active');
+        $(`.stat-card[data-filter="${currentFilter}"]`).addClass('active');
+
+        filterMembers();
+    });
+
+    // Amount filter
+    $('#amountFilter').on('input', function() {
+        const value = $(this).val();
+        currentAmountFilter = value ? parseFloat(value) : null;
+        filterMembers();
+    });
+
+    // Search filter
+    $('#searchMembers').on('input', function() {
+        currentSearchQuery = $(this).val().trim();
+        filterMembers();
+    });
+
+    // Clear filters
+    $('#clearFilters').on('click', function() {
+        currentFilter = 'all';
+        currentAmountFilter = null;
+        currentSearchQuery = '';
+
+        $('#statusFilter').val('all');
+        $('#amountFilter').val('');
+        $('#searchMembers').val('');
+
+        $('.stat-card').removeClass('active');
+        $(`.stat-card[data-filter="all"]`).addClass('active');
+
+        filterMembers();
+    });
+
+    // Track changes in input fields
+    $('.edit-input, .paid-input').on('input change', function() {
+        const $input = $(this);
+        const original = $input.data('original');
+        const current = $input.val();
+
+        if (current !== original) {
+            $input.addClass('changed');
+            $input.closest('tr').addClass('row-changed');
+        } else {
+            $input.removeClass('changed');
+            // Check if any other inputs in the row have changes
+            const $row = $input.closest('tr');
+            const hasChanges = $row.find('.edit-input.changed, .paid-input.changed').length > 0;
+            if (!hasChanges) {
+                $row.removeClass('row-changed');
+            }
+        }
+    });
+
+    // Save member details
+    $('.save-btn').on('click', function() {
+        const $btn = $(this);
+        const $row = $btn.closest('tr');
+        const memberId = $btn.data('member-id');
+
+        // Collect all field values
+        const memberData = {
+            name: $row.find('.name-input').val(),
+            phone_number: $row.find('.phone-input').val(),
+            year_of_study: $row.find('.year-input').val()
+        };
+
+        // Add paid amount if user can edit
+        {% if can_edit %}
+        memberData.paid_total = $row.find('.paid-input').val() || 0;
+        {% endif %}
+
+        // Check if name is empty
+        if (!memberData.name.trim()) {
+            showSuccessMessage('Name is required');
+            return;
+        }
+
+        // Show loading state
+        $btn.prop('disabled', true);
+        $btn.html('<i class="bi bi-hourglass-split"></i>');
+
+        $.ajax({
+            url: '{% url "tracker:update_member_ajax" %}',
+            method: 'POST',
+            data: JSON.stringify({
+                member_id: memberId,
+                ...memberData
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    // Update original values
+                    $row.find('.edit-input, .paid-input').each(function() {
+                        const $input = $(this);
+                        $input.data('original', $input.val());
+                        $input.removeClass('changed');
+                    });
+
+                    // Update row data for filtering
+                    if (response.member) {
+                        $row.attr('data-paid', response.member.paid_total);
+                        $row.attr('data-status', response.member.status);
+
+                        // Update status display
+                        const statusHtml = response.member.status_html || '';
+                        $row.find('.paid-input, .paid-display').next('div').html(statusHtml);
+                    }
+
+                    // Remove row changed class
+                    $row.removeClass('row-changed');
+
+                    // Show success message
+                    showSuccessMessage(response.message);
+
+                    // Show success feedback on button
+                    $btn.html('<i class="bi bi-check-circle text-success"></i>');
+                    setTimeout(function() {
+                        $btn.html('<i class="bi bi-check"></i>');
+                    }, 2000);
+                } else {
+                    showSuccessMessage('Error: ' + response.error);
+                    $btn.html('<i class="bi bi-x-circle text-danger"></i>');
+                    setTimeout(function() {
+                        $btn.html('<i class="bi bi-check"></i>');
+                    }, 2000);
+                }
+            },
+            error: function() {
+                showSuccessMessage('An error occurred. Please try again.');
+                $btn.html('<i class="bi bi-x-circle text-danger"></i>');
+                setTimeout(function() {
+                    $btn.html('<i class="bi bi-check"></i>');
+                }, 2000);
+            },
+            complete: function() {
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
+    // Delete member
+    $('.delete-btn').on('click', function() {
+        const $btn = $(this);
+        const $row = $btn.closest('tr');
+        const memberId = $btn.data('member-id');
+        const memberName = $row.find('.name-input').val();
+
+        // Show confirmation
+        if (confirm(`Are you sure you want to delete ${memberName}? This action cannot be undone.`)) {
+            // Show loading state
+            $btn.prop('disabled', true);
+            $btn.html('<i class="bi bi-hourglass-split"></i>');
+
+            $.ajax({
+                url: '{% url "tracker:delete_member_ajax" %}',
+                method: 'POST',
+                data: JSON.stringify({
+                    member_id: memberId
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    if (response.success) {
+                        // Remove the row with animation
+                        $row.fadeOut(300, function() {
+                            $row.remove();
+                            filterMembers(); // Update count after removal
+                        });
+
+                        showSuccessMessage(response.message);
+                    } else {
+                        showSuccessMessage('Error: ' + response.error);
+                        $btn.html('<i class="bi bi-trash"></i>');
+                        $btn.prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    showSuccessMessage('An error occurred. Please try again.');
+                    $btn.html('<i class="bi bi-trash"></i>');
+                    $btn.prop('disabled', false);
+                }
+            });
+        }
+    });
+
+    // Add new member
+    $('#saveNewMember').on('click', function() {
+        const $btn = $(this);
+        const memberData = {
+            name: $('#newMemberName').val(),
+            phone_number: $('#newMemberPhone').val(),
+            year_of_study: $('#newMemberYear').val()
+        };
+
+        // Add paid amount if user can edit
+        {% if can_edit %}
+        memberData.paid_total = $('#newMemberPaid').val() || 0;
+        {% endif %}
+
+        // Validate required fields
+        if (!memberData.name.trim()) {
+            showSuccessMessage('Name is required');
+            return;
+        }
+
+        // Show loading state
+        $btn.prop('disabled', true);
+        $btn.html('<i class="bi bi-hourglass-split"></i> Adding...');
+
+        $.ajax({
+            url: '{% url "tracker:add_member_ajax" %}',
+            method: 'POST',
+            data: JSON.stringify(memberData),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    // Close modal and reset form
+                    $('#addMemberModal').modal('hide');
+                    $('#addMemberForm')[0].reset();
+
+                    // Show success message
+                    showSuccessMessage(response.message);
+
+                    // Reload page to show new member
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showSuccessMessage('Error: ' + response.error);
+                }
+            },
+            error: function() {
+                showSuccessMessage('An error occurred. Please try again.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false);
+                $btn.html('Add Member');
+            }
+        });
+    });
+
+    // Auto-save on Enter key for text inputs
+    $('.edit-input, .paid-input').on('keypress', function(e) {
+        if (e.which === 13 && $(this).is('input[type="text"], input[type="tel"], input[type="number"]')) {
+            $(this).closest('tr').find('.save-btn').click();
+        }
+    });
+
+    // Reset modal form when closed
+    $('#addMemberModal').on('hidden.bs.modal', function() {
+        $('#addMemberForm')[0].reset();
+    });
+
+    // Initialize with "all" filter active
+    $('.stat-card[data-filter="all"]').addClass('active');
+
+    // Initialize filters
+    filterMembers();
+});
+</script>
+{% endblock %}

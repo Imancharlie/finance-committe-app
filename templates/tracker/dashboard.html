@@ -239,29 +239,29 @@
     .horizontal-stats {
         gap: 0.4rem;
     }
-    
+
     .horizontal-stats .stat-card {
         min-height: 55px;
         padding: 0.6rem;
         min-width: 90px; /* Slightly smaller minimum width */
     }
-    
+
     .stat-value {
         font-size: 1rem;
     }
-    
+
     .stat-icon {
         font-size: 1.6rem;
     }
-    
+
     .stat-label {
         font-size: 0.65rem;
     }
-    
+
     .compact-table {
         font-size: 0.7rem;
     }
-    
+
     .compact-table .member-name-link {
         max-width: 100px;
     }
@@ -271,35 +271,35 @@
     .horizontal-stats {
         gap: 0.3rem;
     }
-    
+
     .horizontal-stats .stat-card {
         min-height: 50px;
         padding: 0.5rem;
         min-width: 80px;
     }
-    
+
     .stat-value {
         font-size: 0.9rem;
     }
-    
+
     .stat-label {
         font-size: 0.6rem;
         margin-bottom: 0.1rem;
     }
-    
+
     .stat-icon {
         font-size: 1.4rem;
         margin-left: 0.3rem;
     }
-    
+
     .compact-table {
         font-size: 0.65rem;
     }
-    
+
     .compact-table .member-name-link {
         max-width: 80px;
     }
-    
+
     .compact-table .form-control-sm {
         min-width: 60px;
         max-width: 80px;
@@ -312,15 +312,15 @@
         min-width: 70px;
         padding: 0.4rem;
     }
-    
+
     .stat-value {
         font-size: 0.8rem;
     }
-    
+
     .stat-label {
         font-size: 0.55rem;
     }
-    
+
     .stat-icon {
         font-size: 1.2rem;
     }
@@ -334,12 +334,12 @@
     <div>
         <h1 class="mb-1">Mission Dashboard</h1>
         <p class="mb-0">Track contributions for Mlali Village mission</p>
-    </div>
+    </div>{% if can_edit %}
     <div class="btn-group">
         <a class="btn btn-primary btn-sm" href="{% url 'tracker:daily_collection' %}">
             <i class="bi bi-cash-coin me-1"></i>Daily Collection
         </a>
-    </div>
+    </div>{% endif %}
 </div>
 
 <!-- Horizontal Statistics Cards -->
@@ -351,7 +351,7 @@
         </div>
         <i class="bi bi-cash-stack stat-icon"></i>
     </div>
-    
+
     <div class="stat-card progress-card">
         <div class="stat-content">
             <div class="stat-label">Progress</div>
@@ -362,7 +362,7 @@
         </div>
         <i class="bi bi-graph-up stat-icon"></i>
     </div>
-    
+
     <div class="stat-card complete-card">
         <div class="stat-content">
             <div class="stat-label">Complete</div>
@@ -371,14 +371,25 @@
         <i class="bi bi-check-circle stat-icon"></i>
     </div>
 </div>
-
+<div class="mb-4">
+    <div class="btn-group" role="group" aria-label="Export options">
+        <a href="{% url 'tracker:export_excel' %}?search={{ search_query }}&filter={{ filter_status }}"
+           class="btn btn-outline-success">
+            <i class="fas fa-file-excel me-1"></i> Excel
+        </a>
+        <a href="{% url 'tracker:export_pdf' %}?search={{ search_query }}&filter={{ filter_status }}"
+           class="btn btn-outline-danger">
+            <i class="fas fa-file-pdf me-1"></i> PDF
+        </a>
+    </div>
+</div>
 <!-- Collapsible Search Section -->
 <div class="search-section">
     <div class="search-trigger" id="searchTrigger">
         <i class="bi bi-search"></i>
         <span>Search members...</span>
     </div>
-    
+
     <div class="search-expanded" id="searchExpanded">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-5">
@@ -389,7 +400,7 @@
                            value="{{ search_query }}" placeholder="Enter member name...">
                 </div>
             </div>
-            
+
             <div class="col-md-3">
                 <label class="form-label small text-muted">Filter Status</label>
                 <select class="form-select" name="filter">
@@ -401,13 +412,13 @@
                     <option value="exceeded" {% if filter_status == 'exceeded' %}selected{% endif %}>Exceeded</option>
                 </select>
             </div>
-            
+
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100">
                     <i class="bi bi-funnel me-1"></i>Filter
                 </button>
             </div>
-            
+
             <div class="col-md-2">
                 <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary w-100">
                     <i class="bi bi-x-lg me-1"></i>Clear
@@ -450,14 +461,14 @@
                             <td class="text-center fw-bold text-success">
                                 {{ member.paid_total|floatformat:0 }}
                             </td>
-                            
+
                             <td class="remaining-display text-center">
                                 <span class="amount-display {% if member.remaining < 0 %}text-success fw-bold{% elif member.remaining > 0 %}text-warning{% endif %}">
                                     {{ member.remaining|floatformat:0 }}
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span class="status-badge 
+                                <span class="status-badge
                                     {% if member.has_exceeded %}status-exceeded{% elif member.is_complete %}status-complete{% elif member.is_incomplete %}status-incomplete{% else %}status-not-started{% endif %}">
                                     {% if member.has_exceeded %}⬆ Exceeded
                                     {% elif member.is_complete %}✓ Complete
@@ -465,7 +476,7 @@
                                     {% else %}✗ Not Started{% endif %}
                                 </span>
                             </td>
-                           
+
                         </tr>
                         {% endfor %}
                     {% else %}
@@ -505,7 +516,7 @@
                     </a>
                 </li>
             {% endif %}
-            
+
             {% with ''|center:page_obj.paginator.num_pages as range %}
                 {% for _ in range %}
                     {% with forloop.counter as num %}
@@ -521,7 +532,7 @@
                     {% endwith %}
                 {% endfor %}
             {% endwith %}
-            
+
             {% if page_obj.has_next %}
                 <li class="page-item">
                     <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if filter_status %}&filter={{ filter_status }}{% endif %}">
@@ -579,7 +590,7 @@ $(document).ready(function() {
     $('#searchTrigger').on('click', function() {
         const $expanded = $('#searchExpanded');
         const $trigger = $(this);
-        
+
         if ($expanded.hasClass('show')) {
             $expanded.removeClass('show');
             $trigger.find('span').text('Search members...');
@@ -592,7 +603,7 @@ $(document).ready(function() {
             }, 300);
         }
     });
-    
+
     // Close search when clicking outside
     $(document).on('click', function(e) {
         if (!$(e.target).closest('.search-section').length) {
@@ -600,7 +611,7 @@ $(document).ready(function() {
             $('#searchTrigger').find('span').text('Search members...');
         }
     });
-    
+
     // Auto-save on input change (with debounce)
     let saveTimeout;
     $('.pledge-input, .paid-input').on('input', function() {
@@ -609,38 +620,38 @@ $(document).ready(function() {
         const memberId = $this.data('member-id');
         const field = $this.data('field');
         const value = $this.val();
-        
+
         saveTimeout = setTimeout(function() {
             updateMember(memberId, field, value);
         }, 1000);
     });
-    
+
     // Manual save button
     $('.save-btn').on('click', function() {
         const memberId = $(this).data('member-id');
         const $row = $(this).closest('tr');
         const pledge = $row.find('.pledge-input').val();
         const paid = $row.find('.paid-input').val();
-        
+
         updateMember(memberId, 'pledge', pledge);
         updateMember(memberId, 'paid_total', paid);
     });
-    
+
     // Quick add member
     $('#quickAddBtn').on('click', function() {
         const $btn = $(this);
         const $spinner = $btn.find('.loading-spinner');
         const name = $('#quick_name').val();
         const pledge = $('#quick_pledge').val();
-        
+
         if (!name) {
             alert('Please enter a name');
             return;
         }
-        
+
         $btn.prop('disabled', true);
         $spinner.show();
-        
+
         $.ajax({
             url: '{% url "tracker:add_member_ajax" %}',
             method: 'POST',
@@ -665,15 +676,15 @@ $(document).ready(function() {
             }
         });
     });
-    
+
     function updateMember(memberId, field, value) {
         const $row = $(`tr[data-member-id="${memberId}"]`);
         const $saveBtn = $row.find('.save-btn');
-        
+
         // Show loading state
         $saveBtn.prop('disabled', true);
         $saveBtn.html('<i class="bi bi-hourglass-split"></i>');
-        
+
         $.ajax({
             url: '{% url "tracker:update_member_ajax" %}',
             method: 'POST',
@@ -688,7 +699,7 @@ $(document).ready(function() {
                     // Update display values
                     $row.find('.pledge-input').val(response.pledge);
                     $row.find('.paid-input').val(response.paid_total);
-                    
+
                     // Update remaining amount with color coding
                     const $remainingDisplay = $row.find('.remaining-display .amount-display');
                     $remainingDisplay.text(response.remaining.toLocaleString());
@@ -698,11 +709,11 @@ $(document).ready(function() {
                     } else if (response.remaining > 0) {
                         $remainingDisplay.addClass('text-warning');
                     }
-                    
+
                     // Update status badge
                     const $statusBadge = $row.find('.status-badge');
                     $statusBadge.removeClass('status-complete status-incomplete status-not-started status-exceeded');
-                    
+
                     if (response.has_exceeded) {
                         $statusBadge.addClass('status-exceeded').text('⬆ Exceeded');
                     } else if (response.is_complete) {
@@ -712,7 +723,7 @@ $(document).ready(function() {
                     } else {
                         $statusBadge.addClass('status-not-started').text('✗ Not Started');
                     }
-                    
+
                     // Show success feedback
                     $saveBtn.html('<i class="bi bi-check-circle text-success"></i>');
                     setTimeout(function() {

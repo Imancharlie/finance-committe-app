@@ -2,100 +2,411 @@
 
 {% block title %}Import Members from Excel{% endblock %}
 
+{% block extra_css %}
+<style>
+    .file-upload-area {
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        cursor: pointer;
+    }
+    
+    .file-upload-area:hover {
+        border-color: #3b82f6;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        transform: translateY(-2px);
+    }
+    
+    .file-upload-area.dragover {
+        border-color: #3b82f6;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        transform: scale(1.02);
+    }
+    
+    .gradient-bg {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .card-modern {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .card-modern:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }
+    
+    .btn-modern {
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-primary-modern {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+    }
+    
+    .btn-primary-modern:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+    }
+    
+    .form-control-modern {
+        border-radius: 10px;
+        border: 2px solid #e5e7eb;
+        padding: 12px 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control-modern:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .alert-modern {
+        border: none;
+        border-radius: 12px;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .progress-steps {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .step {
+        display: flex;
+        align-items: center;
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .step.active {
+        color: #3b82f6;
+    }
+    
+    .step-number {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .step.active .step-number {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .step-connector {
+        width: 40px;
+        height: 2px;
+        background: #e5e7eb;
+        margin: 0 1rem;
+    }
+    
+    .file-selected {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-color: #10b981;
+        padding: 1.5rem;
+        border-radius: 12px;
+    }
+    
+    .format-guide {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-left: 4px solid #f59e0b;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    
+    .column-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .column-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .column-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.75rem;
+        margin-right: 0.75rem;
+    }
+    
+    .required {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    .optional {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+    
+    @media (max-width: 768px) {
+        .step-connector {
+            display: none;
+        }
+        
+        .progress-steps {
+            justify-content: space-around;
+        }
+        
+        .card-modern {
+            margin: 0.5rem;
+        }
+        
+        .file-upload-area {
+            padding: 1.5rem 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-file-earmark-excel me-2"></i>Import Members from Excel
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <h6><i class="bi bi-info-circle me-2"></i>Excel File Format</h6>
-                    <p class="mb-2">Your Excel file should have the following columns:</p>
-                    <ul class="mb-0">
-                        <li><strong>Column A:</strong> Name (required)</li>
-                        <li><strong>Column B:</strong> Pledge Amount (optional, will use default if empty)</li>
-                        <li><strong>Column C:</strong> Phone Number (optional)</li>
-                        <li><strong>Column D:</strong> Email Address (optional)</li>
-                        <li><strong>Column E:</strong> Course/Program (optional)</li>
-                        <li><strong>Column F:</strong> Year (optional)</li>
-                    </ul>
-                </div>
-                
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.excel_file.id_for_label }}" class="form-label">
-                            {{ form.excel_file.label }}
-                        </label>
-                        {{ form.excel_file }}
-                        {% if form.excel_file.help_text %}
-                            <div class="form-text">{{ form.excel_file.help_text }}</div>
-                        {% endif %}
-                        {% if form.excel_file.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.excel_file.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            {{ form.update_existing }}
-                            <label class="form-check-label" for="{{ form.update_existing.id_for_label }}">
-                                {{ form.update_existing.label }}
+<div class="container-fluid px-3 py-4">
+    <!-- Header Section -->
+    <div class="text-center mb-5">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-circle gradient-bg mb-3" style="width: 70px; height: 70px;">
+            <i class="bi bi-file-earmark-excel text-white" style="font-size: 2rem;"></i>
+        </div>
+        <h1 class="display-6 fw-bold text-dark mb-2">Import Members from Excel</h1>
+        <p class="lead text-muted">Upload your Excel file to import member data quickly and efficiently</p>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="progress-steps">
+        <div class="step active" id="step-1">
+            <div class="step-number">1</div>
+            <span>Select File</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" id="step-2">
+            <div class="step-number">2</div>
+            <span>Configure</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" id="step-3">
+            <div class="step-number">3</div>
+            <span>Import</span>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Main Import Card -->
+            <div class="card card-modern mb-4">
+                <div class="card-body p-4 p-md-5">
+                    <form method="post" enctype="multipart/form-data" id="import-form">
+                        {% csrf_token %}
+
+                        <!-- File Upload Section -->
+                        <div class="mb-5">
+                            <label class="form-label fw-semibold text-dark mb-3">
+                                <i class="bi bi-cloud-upload me-2 text-primary"></i>Excel File
                             </label>
-                        </div>
-                        {% if form.update_existing.help_text %}
-                            <div class="form-text">{{ form.update_existing.help_text }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="{{ form.default_pledge.id_for_label }}" class="form-label">
-                            {{ form.default_pledge.label }}
-                        </label>
-                        {{ form.default_pledge }}
-                        <div class="form-text">This amount will be used if the Excel file doesn't specify a pledge amount.</div>
-                        {% if form.default_pledge.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.default_pledge.errors %}
-                                    {{ error }}
-                                {% endfor %}
+                            
+                            <div class="file-upload-area" id="file-drop-zone">
+                                <div id="upload-content">
+                                    <i class="bi bi-cloud-upload text-primary mb-3" style="font-size: 3rem;"></i>
+                                    <h5 class="text-dark mb-2">Drop your Excel file here</h5>
+                                    <p class="text-muted mb-3">or click to browse</p>
+                                    <button type="button" class="btn btn-outline-primary btn-modern" onclick="document.getElementById('id_excel_file').click()">
+                                        <i class="bi bi-folder2-open me-2"></i>Choose File
+                                    </button>
+                                </div>
+                                
+                                <div id="file-selected" class="d-none">
+                                    <i class="bi bi-file-earmark-excel text-success mb-3" style="font-size: 3rem;"></i>
+                                    <h5 class="text-dark mb-2" id="file-name">Selected File</h5>
+                                    <p class="text-muted mb-3" id="file-size">File size</p>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearFile()">
+                                        <i class="bi bi-x-circle me-1"></i>Remove
+                                    </button>
+                                </div>
                             </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-2"></i>Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-upload me-2"></i>Import Members
-                        </button>
-                    </div>
-                </form>
+                            
+                            <!-- OPTION 1: Proper file input -->
+                            <input type="file" id="id_excel_file" name="excel_file" 
+                                   accept=".xlsx,.xls,.csv" style="display: none;" />
+                            
+                            <!-- Display file upload errors if any -->
+                            <div id="file-errors" class="text-danger mt-2 d-none">
+                                <small>Please select a valid Excel file (.xlsx, .xls, or .csv)</small>
+                            </div>
+                        </div>
+
+                        <!-- Configuration Section -->
+                        <div class="mb-5">
+                            <h4 class="fw-semibold text-dark mb-4">
+                                <i class="bi bi-gear me-2 text-primary"></i>Import Settings
+                            </h4>
+                            
+                            <!-- Update Existing -->
+                            <div class="form-check p-3 bg-light rounded-3 mb-3">
+                                {{ form.update_existing }}
+                                <label class="form-check-label fw-medium" for="{{ form.update_existing.id_for_label }}">
+                                    {{ form.update_existing.label }}
+                                </label>
+                                {% if form.update_existing.help_text %}
+                                    <div class="form-text">{{ form.update_existing.help_text }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Default Pledge -->
+                            <div class="mb-3">
+                                <label for="{{ form.default_pledge.id_for_label }}" class="form-label fw-medium">
+                                    <i class="bi bi-cash-coin me-2 text-success"></i>{{ form.default_pledge.label }}
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">TSh</span>
+                                    {{ form.default_pledge }}
+                                </div>
+                                <div class="form-text">This amount will be used if the Excel file doesn't specify a pledge amount.</div>
+                                {% if form.default_pledge.errors %}
+                                    <div class="text-danger mt-1">
+                                        {% for error in form.default_pledge.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-column flex-md-row gap-3 justify-content-between">
+                            <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary btn-modern">
+                                <i class="bi bi-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary-modern btn-modern" disabled id="import-btn">
+                                <i class="bi bi-upload me-2"></i>Import Members
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-        
-        <!-- Sample Excel Template -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-download me-2"></i>Sample Excel Template
-                </h6>
+
+        <div class="col-lg-4">
+            <!-- Format Guide -->
+            <div class="card card-modern mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Excel Format Guide
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3 text-muted">Your Excel file should contain these columns:</p>
+                    <div class="column-item">
+                        <div class="column-badge required">A</div>
+                        <div>
+                            <strong>Name</strong>
+                            <span class="badge bg-danger ms-2">Required</span>
+                        </div>
+                    </div>
+                    <div class="column-item">
+                        <div class="column-badge optional">B</div>
+                        <span>Pledge Amount</span>
+                    </div>
+                    <div class="column-item">
+                        <div class="column-badge optional">C</div>
+                        <span>Paid Amount</span>
+                    </div>
+                    <div class="column-item">
+                        <div class="column-badge optional">D</div>
+                        <span>Phone Number</span>
+                    </div>
+                    <div class="column-item">
+                        <div class="column-badge optional">E</div>
+                        <span>Email Address</span>
+                    </div>
+                    <div class="column-item">
+                        <div class="column-badge optional">F</div>
+                        <span>Course/Program</span>
+                    </div>
+                    <div class="column-item">
+                        <div class="column-badge optional">G</div>
+                        <span>Year</span>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <p class="mb-3">Download this sample template to see the correct format:</p>
-                <a href="#" class="btn btn-outline-primary" onclick="downloadSampleTemplate()">
-                    <i class="bi bi-file-earmark-excel me-2"></i>Download Sample Template
-                </a>
+
+            <!-- Sample Template -->
+            <div class="card card-modern mb-4">
+                <div class="card-header bg-success text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-download me-2"></i>Sample Template
+                    </h6>
+                </div>
+                <div class="card-body text-center">
+                    <p class="mb-3 text-muted">Download our sample template to get started</p>
+                    <button class="btn btn-success btn-modern w-100" onclick="downloadSampleTemplate()">
+                        <i class="bi bi-file-earmark-excel me-2"></i>Download Sample Template
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="format-guide">
+                <h6 class="fw-semibold text-dark mb-3">
+                    <i class="bi bi-lightbulb me-2 text-warning"></i>Pro Tips
+                </h6>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        <small>Keep your data clean and consistent</small>
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        <small>Use the first row for column headers</small>
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        <small>Save as .xlsx or .xls format</small>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        <small>Ensure phone numbers are properly formatted</small>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -104,21 +415,126 @@
 
 {% block extra_js %}
 <script>
+// File handling functions
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if (file) {
+        // Validate file type
+        const allowedTypes = ['.xlsx', '.xls', '.csv'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedTypes.includes(fileExtension)) {
+            showNotification('Please select a valid Excel file (.xlsx, .xls, or .csv)', 'error');
+            clearFile();
+            return;
+        }
+        
+        document.getElementById('upload-content').classList.add('d-none');
+        document.getElementById('file-selected').classList.remove('d-none');
+        document.getElementById('file-drop-zone').classList.add('file-selected');
+        document.getElementById('file-name').textContent = file.name;
+        document.getElementById('file-size').textContent = formatFileSize(file.size);
+        document.getElementById('import-btn').disabled = false;
+        document.getElementById('file-errors').classList.add('d-none');
+        updateProgressStep(2);
+        showNotification('File selected successfully!', 'success');
+    }
+}
+
+function clearFile() {
+    const fileInput = document.getElementById('id_excel_file');
+    fileInput.value = '';
+    document.getElementById('upload-content').classList.remove('d-none');
+    document.getElementById('file-selected').classList.add('d-none');
+    document.getElementById('file-drop-zone').classList.remove('file-selected');
+    document.getElementById('import-btn').disabled = true;
+    updateProgressStep(1);
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function updateProgressStep(step) {
+    // Remove active class from all steps
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    
+    // Add active class to current and previous steps
+    for (let i = 1; i <= step; i++) {
+        const stepElement = document.getElementById(`step-${i}`);
+        if (stepElement) {
+            stepElement.classList.add('active');
+        }
+    }
+}
+
+// Initialize variables
+const dropZone = document.getElementById('file-drop-zone');
+const fileInput = document.getElementById('id_excel_file');
+
+// Make entire drop zone clickable
+dropZone.addEventListener('click', () => fileInput.click());
+
+// Drag and drop functionality
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        handleFileSelect(fileInput);
+    }
+});
+
+// File input change event
+fileInput.addEventListener('change', function() {
+    handleFileSelect(this);
+});
+
+// Form submission
+document.getElementById('import-form').addEventListener('submit', function(e) {
+    if (!fileInput.files[0]) {
+        e.preventDefault();
+        showNotification('Please select an Excel file to import', 'error');
+        document.getElementById('file-errors').classList.remove('d-none');
+        return;
+    }
+    
+    updateProgressStep(3);
+    showNotification('Import started! Processing your file...', 'info');
+    
+    // Disable the button to prevent double submission
+    document.getElementById('import-btn').disabled = true;
+    document.getElementById('import-btn').innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+});
+
+// Sample template download
 function downloadSampleTemplate() {
-    // Create sample data
     const sampleData = [
-        ['Name', 'Pledge', 'Phone', 'Email', 'Course', 'Year'],
-        ['John Mwambene', 70000, '0712345678', 'john@example.com', 'Computer Science', '2nd Year'],
-        ['Sarah Kimambo', 80000, '0723456789', 'sarah@example.com', 'Business Administration', '3rd Year'],
-        ['Michael Mwakasege', 90000, '0734567890', 'michael@example.com', 'Engineering', '1st Year'],
-        ['Grace Mwakatobe', 100000, '0745678901', 'grace@example.com', 'Medicine', '4th Year'],
-        ['David Mwambene', 70000, '0756789012', 'david@example.com', 'Law', '2nd Year']
+        ['Name', 'Pledge', 'Paid', 'Phone', 'Email', 'Course', 'Year'],
+        ['John Mwambene', 70000, 20000, '0712345678', 'john@example.com', 'Computer Science', '2nd Year'],
+        ['Sarah Kimambo', 80000, 0, '0723456789', 'sarah@example.com', 'Business Administration', '3rd Year'],
+        ['Michael Mwakasege', 90000, 10000, '0734567890', 'michael@example.com', 'Engineering', '1st Year'],
+        ['Grace Mwakatobe', 100000, 30000, '0745678901', 'grace@example.com', 'Medicine', '4th Year'],
+        ['David Mwambene', 70000, 0, '0756789012', 'david@example.com', 'Law', '2nd Year']
     ];
-    
-    // Convert to CSV format
+
     const csvContent = sampleData.map(row => row.join(',')).join('\n');
-    
-    // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -128,8 +544,40 @@ function downloadSampleTemplate() {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    
-    alert('Sample template downloaded! You can open this in Excel and save as .xlsx format.');
+
+    showNotification('Sample template downloaded! You can open this in Excel and save as .xlsx format.', 'success');
 }
+
+// Notification system
+function showNotification(message, type = 'info') {
+    const alertClass = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'info': 'alert-info'
+    };
+    
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass[type]} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Make sure the import button is initially disabled
+    document.getElementById('import-btn').disabled = true;
+});
 </script>
-{% endblock %} 
+{% endblock %}
