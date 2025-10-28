@@ -341,16 +341,19 @@ def update_member_ajaxs(request, org_slug=None):
         # Update paid amount (admin and owner only)
         if 'paid_total' in data:
             if not is_org_admin(request.user, tenant):
-                return JsonResponse({'success': False, 'error': 'Permission denied: Only admins can edit paid amount'})
-            try:
-                paid_amount = float(data['paid_total'])
-                if paid_amount < 0:
-                    return JsonResponse({'success': False, 'error': 'Paid amount cannot be negative'})
-                if member.paid_total != paid_amount:
-                    changes.append(('paid_total', str(member.paid_total), str(paid_amount)))
-                    member.paid_total = paid_amount
-            except (ValueError, TypeError):
-                return JsonResponse({'success': False, 'error': 'Invalid paid amount'})
+                # If non-admin user somehow sent paid_total, ignore it and continue
+                # This prevents errors while maintaining security
+                data.pop('paid_total', None)
+            else:
+                try:
+                    paid_amount = float(data['paid_total'])
+                    if paid_amount < 0:
+                        return JsonResponse({'success': False, 'error': 'Paid amount cannot be negative'})
+                    if member.paid_total != paid_amount:
+                        changes.append(('paid_total', str(member.paid_total), str(paid_amount)))
+                        member.paid_total = paid_amount
+                except (ValueError, TypeError):
+                    return JsonResponse({'success': False, 'error': 'Invalid paid amount'})
 
         member.save()
         
@@ -2782,6 +2785,46 @@ def custom_404(request, exception=None):
 def custom_500(request):
     """Custom 500 error page handler"""
     return render(request, '500.html', status=500)
+
+
+@login_required
+def health_check(request):
+    """Health check endpoint for monitoring"""
+    from django.db import connection
+    from django.core.cache import cache
+
+    health_status = {
+        'status': 'healthy',
+        'timestamp': timezone.now().isoformat(),
+        'checks': {}
+    }
+
+    # Database check
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        health_status['checks']['database'] = 'healthy'
+    except Exception as e:
+        health_status['status'] = 'unhealthy'
+        health_status['checks']['database'] = f'unhealthy: {str(e)}'
+
+    # Cache check (if using cache)
+    try:
+        cache.set('health_check', 'ok', 10)
+        cache_value = cache.get('health_check')
+        if cache_value == 'ok':
+            health_status['checks']['cache'] = 'healthy'
+        else:
+            health_status['checks']['cache'] = 'unhealthy: cache not working'
+    except:
+        health_status['checks']['cache'] = 'disabled'
+
+    # Application check
+    health_status['checks']['application'] = 'healthy'
+
+    status_code = 200 if health_status['status'] == 'healthy' else 503
+
+    return JsonResponse(health_status, status=status_code)
 
 
 @login_required

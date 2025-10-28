@@ -16,6 +16,7 @@ tenant_urlpatterns = [
     path('export/admin-log/pdf/', views.export_admin_log_pdf, name='export_admin_log_pdf'),
     path('export/member-edit-log/excel/', views.export_member_edit_log_excel, name='export_member_edit_log_excel'),
     path('export/member-edit-log/pdf/', views.export_member_edit_log_pdf, name='export_member_edit_log_pdf'),
+    path('health/', views.health_check, name='health_check'),
     path('import-excel/', views.import_excel, name='import_excel'),
     path('ajax/update-transaction/', views.update_transaction_ajax, name='update_transaction_ajax'),
     path('ajax/delete-transaction/', views.delete_transaction_ajax, name='delete_transaction_ajax'),

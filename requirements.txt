@@ -1,10 +1,39 @@
+# Django and core dependencies
 Django==5.2.3
 asgiref==3.8.1
 sqlparse==0.5.3
 tzdata==2025.2
-openpyxl==3.1.5
+
+# Database
 PyMySQL==1.1.0
-reportlab==4.0.9
+
+# File handling and processing
+openpyxl==3.1.5
 Pillow==11.0.0
-django-pwa==1.0.11
+
+# PDF generation
+reportlab==4.0.9
+
+# Configuration management
 python-decouple==3.8
+
+# PWA functionality
+django-pwa==1.0.11
+
+# Security and performance
+django-cors-headers==4.3.1
+django-sslserver==0.22
+whitenoise==6.6.0
+
+# Additional utilities
+requests==2.31.0
+beautifulsoup4==4.12.2
+
+# Development and testing (optional for production)
+# django-debug-toolbar==4.2.0
+# pytest==7.4.3
+# pytest-django==4.5.2
+
+# Production server (choose one)
+# gunicorn==21.2.0
+# uvicorn[standard]==0.24.0

@@ -170,6 +170,8 @@ temp/
 
 # Documentation files (exclude from production deployment)
 *.md
+!README_PRODUCTION.md
+!deploy.sh
 SUMMARY.txt
 document for IPT/
 test_data_isolation.py

@@ -769,10 +769,11 @@ $(document).ready(function() {
             year_of_study: $row.find('.year-input').val()
         };
 
-        // Add paid amount if user can edit
-        {% if can_edit %}
-        memberData.paid_total = $row.find('.paid-input').val() || 0;
-        {% endif %}
+        // Add paid amount only if user can actually edit it (not disabled)
+        const $paidInput = $row.find('.paid-input');
+        if (!$paidInput.prop('disabled')) {
+            memberData.paid_total = $paidInput.val() || 0;
+        }
 
         // Check if name is empty
         if (!memberData.name.trim()) {
