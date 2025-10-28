@@ -166,4 +166,10 @@ logs/
 
 # Temporary files
 tmp/
-temp/ 
+temp/
+
+# Documentation files (exclude from production deployment)
+*.md
+SUMMARY.txt
+document for IPT/
+test_data_isolation.py

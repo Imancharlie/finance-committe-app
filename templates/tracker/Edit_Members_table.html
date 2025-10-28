@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block title %}Edit Members - Mission Offering Tracker{% endblock %}
 
@@ -117,7 +118,7 @@
         top: 20px;
         right: 20px;
         z-index: 9999;
-        background: linear-gradient(135deg, #059669, #047857);
+        background: #059669;
         color: white;
         padding: 0.75rem 1.5rem;
         border-radius: 8px;
@@ -170,7 +171,7 @@
 
     /* Smart filters */
     .smart-filters {
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        background: #f8f9fa;
         border-radius: 8px;
         padding: 0.5rem;
     }
@@ -189,7 +190,7 @@
     }
 
     .filter-badge.active {
-        background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+        background: var(--primary-color);
         color: white;
     }
 
@@ -270,7 +271,7 @@
         font-size: 0.65rem;
         font-weight: 600;
         padding: 0.4rem 0.2rem;
-        background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+        background: var(--primary-color);
         color: white;
         border: none;
     }
@@ -347,7 +348,7 @@
     }
 
     .stat-card {
-        background: linear-gradient(135deg, #ffffff, #f8f9fa);
+        background: #ffffff;
         border: 1px solid #dee2e6;
         border-radius: 8px;
         padding: 0.5rem;
@@ -363,7 +364,7 @@
     }
 
     .stat-card.active {
-        background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+        background: var(--primary-color);
         color: white;
         border-color: var(--primary-color);
     }
@@ -389,10 +390,10 @@
         <p class="text-muted mb-0">Edit member details and track payments efficiently</p>
     </div>
     <div class="btn-group">
-        <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-primary btn-sm">
+        <a href="{% url 'tracker:dashboard' org_slug=tenant.slug %}" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-house me-1"></i>Dashboard
         </a>{% if can_edit %}
-        <a href="{% url 'tracker:daily_collection' %}" class="btn btn-outline-secondary btn-sm">
+        <a href="{% url 'tracker:daily_collection' org_slug=tenant.slug %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-collection me-1"></i>Collection
         </a>{% endif %}
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
@@ -508,14 +509,10 @@
                         </td>
 
                         <td>
-                            {% if can_edit %}
-                                <input type="number" class="form-control form-control-sm paid-input amount-input"
-                                       value="{{ member.paid_total }}" data-field="paid_total"
-                                       data-original="{{ member.paid_total }}" min="0" step="1000">
-                            {% else %}
-                                <input type="text" class="form-control form-control-sm paid-display amount-input"
-                                       value="{{ member.paid_total|floatformat:0 }}" readonly>
-                            {% endif %}
+                            <input type="number" class="form-control form-control-sm paid-input amount-input"
+                                   value="{{ member.paid_total }}" data-field="paid_total"
+                                   data-original="{{ member.paid_total }}" min="0" step="1000"
+                                   {% if not is_org_admin %}disabled{% endif %}>
                             <div class="mt-1">
                                 {% if member.is_complete %}
                                     <small class="status-complete">✓ Complete</small>
@@ -533,12 +530,12 @@
                             <div class="action-buttons">
                                 <button type="button" class="btn btn-outline-success btn-sm save-btn"
                                         data-member-id="{{ member.id }}" title="Save Changes">
-                                    <i class="bi bi-check"></i>
+                                    <i class="bi bi-check"></i> Save
                                 </button>
-                                {% if can_edit %}
+                                {% if is_org_admin %}
                                 <button type="button" class="btn btn-outline-danger btn-sm delete-btn"
                                         data-member-id="{{ member.id }}" title="Delete Member">
-                                    <i class="bi bi-trash"></i>
+                                    <i class="bi bi-trash"></i> Delete
                                 </button>
                                 {% endif %}
                             </div>
@@ -576,30 +573,18 @@
             <div class="modal-body">
                 <form id="addMemberForm">
                     <div class="mb-3">
-                        <label for="newMemberName" class="form-label">Name *</label>
-                        <input type="text" class="form-control" id="newMemberName" required>
+                        <label for="newMemberName" class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="newMemberName" placeholder="Enter full name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="newMemberPhone" class="form-label">Phone Number</label>
-                        <input type="tel" class="form-control" id="newMemberPhone" placeholder="e.g., +255712345678">
+                        <label for="newMemberPledge" class="form-label">Pledge Amount (TZS) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="newMemberPledge" placeholder="Default: {{ default_pledge_amount|intcomma }}" min="0" step="1000" value="{{ default_pledge_amount|intcomma }}" required>
+                        <small class="form-text text-muted">Default: {{ default_pledge_amount|intcomma }} TZS</small>
                     </div>
                     <div class="mb-3">
-                        <label for="newMemberYear" class="form-label">Year of Study</label>
-                        <select class="form-select" id="newMemberYear">
-                            <option value="">Select Year</option>
-                            <option value="1">Year 1</option>
-                            <option value="2">Year 2</option>
-                            <option value="3">Year 3</option>
-                            <option value="4">Year 4</option>
-                            <option value="5">Year 5</option>
-                        </select>
+                        <label for="newMemberPhone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" id="newMemberPhone" placeholder="e.g., +255712345678" required>
                     </div>
-                    {% if can_edit %}
-                    <div class="mb-3">
-                        <label for="newMemberPaid" class="form-label">Initial Paid Amount</label>
-                        <input type="number" class="form-control" id="newMemberPaid" min="0" step="1000" value="0">
-                    </div>
-                    {% endif %}
                 </form>
             </div>
             <div class="modal-footer">
@@ -800,7 +785,7 @@ $(document).ready(function() {
         $btn.html('<i class="bi bi-hourglass-split"></i>');
 
         $.ajax({
-            url: '{% url "tracker:update_member_ajax" %}',
+            url: '{% url "tracker:update_member_ajax" org_slug=tenant.slug %}',
             method: 'POST',
             data: JSON.stringify({
                 member_id: memberId,
@@ -872,7 +857,7 @@ $(document).ready(function() {
             $btn.html('<i class="bi bi-hourglass-split"></i>');
 
             $.ajax({
-                url: '{% url "tracker:delete_member_ajax" %}',
+                url: '{% url "tracker:delete_member_ajax" org_slug=tenant.slug %}',
                 method: 'POST',
                 data: JSON.stringify({
                     member_id: memberId
@@ -907,18 +892,18 @@ $(document).ready(function() {
         const $btn = $(this);
         const memberData = {
             name: $('#newMemberName').val(),
-            phone_number: $('#newMemberPhone').val(),
-            year_of_study: $('#newMemberYear').val()
+            pledge: $('#newMemberPledge').val() || 70000,
+            phone_number: $('#newMemberPhone').val()
         };
-
-        // Add paid amount if user can edit
-        {% if can_edit %}
-        memberData.paid_total = $('#newMemberPaid').val() || 0;
-        {% endif %}
 
         // Validate required fields
         if (!memberData.name.trim()) {
             showSuccessMessage('Name is required');
+            return;
+        }
+
+        if (!memberData.phone_number.trim()) {
+            showSuccessMessage('Phone number is required');
             return;
         }
 
@@ -927,7 +912,7 @@ $(document).ready(function() {
         $btn.html('<i class="bi bi-hourglass-split"></i> Adding...');
 
         $.ajax({
-            url: '{% url "tracker:add_member_ajax" %}',
+            url: '{% url "tracker:add_member_ajax" org_slug=tenant.slug %}',
             method: 'POST',
             data: JSON.stringify(memberData),
             contentType: 'application/json',

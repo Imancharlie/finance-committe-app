@@ -1,0 +1,79 @@
+{% extends "tracker/onboarding/base.html" %}
+
+{% block title %}Import Members - Onboarding{% endblock %}
+
+{% block content %}
+<div class="onboarding-header">
+    <h1><i class="bi bi-upload me-2"></i>Import Members</h1>
+    <p>Import your members from an Excel file (optional)</p>
+</div>
+
+<!-- Import Info -->
+<div style="background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 6px; padding: 1.5rem; margin-bottom: 2rem;">
+    <h5 style="color: #0056b3; margin-bottom: 1rem;">
+        <i class="bi bi-info-circle me-2"></i>How to Import
+    </h5>
+    <ul style="margin: 0; padding-left: 1.5rem; color: #333; font-size: 0.9rem;">
+        <li>Prepare an Excel file with member data</li>
+        <li>Include columns: Name, Phone, Email, Pledge Amount</li>
+        <li>Upload the file to add all members at once</li>
+        <li>You can always add members manually later</li>
+    </ul>
+</div>
+
+<!-- Import Form -->
+<form method="POST" enctype="multipart/form-data" id="importForm">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <label for="import_file">Select Excel File</label>
+        <input 
+            type="file" 
+            id="import_file" 
+            name="import_file" 
+            accept=".xlsx,.xls,.csv"
+        >
+        <small>Supported formats: Excel (.xlsx, .xls) or CSV</small>
+    </div>
+
+    <div class="button-group">
+        <button type="submit" class="btn-action btn-next" id="importBtn">
+            <i class="bi bi-upload me-1"></i>Import Members
+        </button>
+        <button type="button" class="btn-action btn-skip" onclick="skipImport()">
+            <i class="bi bi-skip-forward me-1"></i>Skip & Go to Dashboard
+        </button>
+    </div>
+</form>
+
+<!-- Success Message -->
+<div id="successMessage" style="display: none; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 1.5rem; margin-top: 2rem; color: #155724;">
+    <i class="bi bi-check-circle me-2"></i>
+    <span id="successText"></span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function skipImport() {
+        // Redirect to dashboard
+        window.location.href = "{% url 'tracker:dashboard' org_slug=organization.slug %}";
+    }
+
+    document.getElementById('importForm').addEventListener('submit', function(e) {
+        const fileInput = document.getElementById('import_file');
+        
+        if (!fileInput.files.length) {
+            e.preventDefault();
+            alert('Please select a file to import');
+            return;
+        }
+        
+        // Show processing message
+        const btn = document.getElementById('importBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Importing...';
+    });
+</script>
+{% endblock %}

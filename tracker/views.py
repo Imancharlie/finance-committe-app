@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
@@ -15,9 +15,109 @@ from io import BytesIO
 from django.db import connection
 from django.utils import timezone
 
-from .models import Member, Transaction
-from .forms import CustomLoginForm, MemberForm, QuickMemberForm, TransactionForm, MemberUpdateForm, ExcelImportForm
-from django.contrib.admin.views.decorators import staff_member_required
+from .models import Member, Transaction, OrganizationUser, Organization, OrganizationTheme, MemberEditLog
+from .forms import CustomLoginForm, MemberForm, QuickMemberForm, TransactionForm, MemberUpdateForm, ExcelImportForm, SignUpForm, AddOrganizationUserForm
+# Removed Django's staff_member_required - using org_staff_required instead
+from django.contrib.auth.models import User
+from .permissions import org_staff_required, org_admin_required, org_owner_required, is_org_owner, is_org_admin
+import secrets
+import string
+
+# ============================================================================
+# PUBLIC VIEWS (Landing, Signup)
+# ============================================================================
+
+def landing_view(request):
+    """Landing page for new visitors"""
+    if request.user.is_authenticated:
+        return redirect_to_dashboard(request)
+    return render(request, 'landing.html')
+
+
+def signup_view(request):
+    """User registration and organization creation"""
+    if request.user.is_authenticated:
+        return redirect_to_dashboard(request)
+    
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            try:
+                # Create user
+                user = User.objects.create_user(
+                    username=form.cleaned_data['username'],
+                    email=form.cleaned_data['email'],
+                    password=form.cleaned_data['password'],
+                    first_name=form.cleaned_data['first_name'],
+                    last_name=form.cleaned_data['last_name']
+                )
+                
+                # Create organization
+                org_slug = form.cleaned_data['organization_name'].lower().replace(' ', '-')
+                # Ensure unique slug
+                base_slug = org_slug
+                counter = 1
+                while Organization.objects.filter(slug=org_slug).exists():
+                    org_slug = f"{base_slug}-{counter}"
+                    counter += 1
+                
+                organization = Organization.objects.create(
+                    name=form.cleaned_data['organization_name'],
+                    slug=org_slug,
+                    description=form.cleaned_data['organization_description'],
+                    is_active=True
+                )
+                
+                # Create organization theme with defaults
+                OrganizationTheme.objects.create(
+                    organization=organization,
+                    primary_color='#7492b9',
+                    secondary_color='#6c757d',
+                    success_color='#28a745',
+                    warning_color='#ffc107',
+                    danger_color='#dc3545',
+                    navbar_title=organization.name,
+                    watermark_text='Bossin',
+                    default_pledge_amount=Decimal('70000.00'),
+                    target_amount=Decimal('210000.00')
+                )
+                
+                # Create organization user (owner)
+                OrganizationUser.objects.create(
+                    user=user,
+                    organization=organization,
+                    role='owner',
+                    is_active=True
+                )
+                
+                # Log the user in
+                login(request, user)
+                messages.success(request, f'Welcome {user.first_name}! Your organization "{organization.name}" has been created.')
+                
+                # Redirect to onboarding flow
+                return redirect('tracker:onboarding_financial', org_slug=organization.slug)
+                
+            except Exception as e:
+                messages.error(request, f'Error creating account: {str(e)}')
+    else:
+        form = SignUpForm()
+    
+    return render(request, 'tracker/signup.html', {'form': form})
+
+
+# Helper function to redirect to dashboard with org_slug
+def redirect_to_dashboard(request):
+    """Redirect to user's organization dashboard or admin if no org"""
+    if hasattr(request, 'tenant') and request.tenant:
+        return redirect('tracker:dashboard', org_slug=request.tenant.slug)
+    
+    # Try to get user's first organization
+    org_user = OrganizationUser.objects.filter(user=request.user, is_active=True).first()
+    if org_user:
+        return redirect('tracker:dashboard', org_slug=org_user.organization.slug)
+    
+    # Fall back to admin
+    return redirect('admin:index')
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -92,12 +192,15 @@ from django.views.decorators.http import require_http_methods
 import json
 from .models import Member
 
-@login_required
-def edit_members(request):
+@org_staff_required
+def edit_members(request, org_slug=None):
     """Main view for editing member details with smart filtering"""
     try:
-        # Get all members with all their information
-        members = Member.objects.all().order_by('name').select_related()
+        # Get tenant from request for data isolation
+        tenant = request.tenant
+
+        # Get members for THIS ORGANIZATION ONLY
+        members = Member.objects.filter(organization=tenant).order_by('name').select_related()
 
         # Handle search (keep for backend if needed)
         search_query = request.GET.get('search', '').strip()
@@ -109,11 +212,11 @@ def edit_members(request):
                 Q(course__icontains=search_query)
             )
 
-        # Calculate statistics for quick stats
-        total_members = Member.objects.count()
+        # Calculate statistics for quick stats - FOR THIS ORGANIZATION ONLY
+        total_members = Member.objects.filter(organization=tenant).count()
 
-        # Calculate payment statistics using model properties
-        all_members = Member.objects.all()
+        # Calculate payment statistics using model properties - FOR THIS ORGANIZATION ONLY
+        all_members = Member.objects.filter(organization=tenant)
         completed_payments = 0
         incomplete_payments = 0
         not_started_payments = 0
@@ -179,21 +282,26 @@ def edit_members(request):
             'incomplete_payments': incomplete_payments,
             'not_started_payments': not_started_payments,
             'exceeded_payments': exceeded_payments,
-            'can_edit': request.user.is_staff,  # Permission check
+            'can_edit': True,  # Admin can always edit (decorator ensures this)
         }
 
         return render(request, 'tracker/Edit_Members_table.html', context)
 
     except Exception as e:
         messages.error(request, f'Error loading members: {str(e)}')
-        return redirect('tracker:dashboard')
+        return redirect_to_dashboard(request)
 
 @csrf_exempt
 @require_http_methods(["POST"])
 @login_required
-def update_member_ajaxs(request):
+def update_member_ajaxs(request, org_slug=None):
     """AJAX endpoint for updating member details"""
     try:
+        # Get the tenant from request
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return JsonResponse({'success': False, 'error': 'Organization not found'})
+
         data = json.loads(request.body)
         member_id = data.get('member_id')
 
@@ -201,33 +309,61 @@ def update_member_ajaxs(request):
             return JsonResponse({'success': False, 'error': 'Member ID is required'})
 
         try:
-            member = Member.objects.get(id=member_id)
+            # Filter by organization for data isolation
+            member = Member.objects.get(id=member_id, organization=tenant)
         except Member.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Member not found'})
 
+        # Track changes for logging
+        changes = []
+        
         # Update basic fields (always allowed)
         if 'name' in data:
             if not data['name'].strip():
                 return JsonResponse({'success': False, 'error': 'Name cannot be empty'})
-            member.name = data['name'].strip()
+            new_name = data['name'].strip()
+            if member.name != new_name:
+                changes.append(('name', member.name, new_name))
+                member.name = new_name
 
         if 'phone_number' in data:
-            member.phone = data['phone_number'].strip()
+            new_phone = data['phone_number'].strip()
+            if member.phone != new_phone:
+                changes.append(('phone', member.phone, new_phone))
+                member.phone = new_phone
 
         if 'year_of_study' in data:
-            member.year = data['year_of_study'].strip()
+            new_year = data['year_of_study'].strip()
+            if member.year != new_year:
+                changes.append(('year', member.year, new_year))
+                member.year = new_year
 
-        # Update paid amount only if user is staff
-        if 'paid_total' in data and request.user.is_staff:
+        # Update paid amount (admin and owner only)
+        if 'paid_total' in data:
+            if not is_org_admin(request.user, tenant):
+                return JsonResponse({'success': False, 'error': 'Permission denied: Only admins can edit paid amount'})
             try:
                 paid_amount = float(data['paid_total'])
                 if paid_amount < 0:
                     return JsonResponse({'success': False, 'error': 'Paid amount cannot be negative'})
-                member.paid_total = paid_amount
+                if member.paid_total != paid_amount:
+                    changes.append(('paid_total', str(member.paid_total), str(paid_amount)))
+                    member.paid_total = paid_amount
             except (ValueError, TypeError):
                 return JsonResponse({'success': False, 'error': 'Invalid paid amount'})
 
         member.save()
+        
+        # Log all changes to MemberEditLog
+        for field_name, before_val, after_val in changes:
+            MemberEditLog.objects.create(
+                organization=tenant,
+                member=member,
+                field_changed=field_name,
+                before_value=before_val,
+                after_value=after_val,
+                edited_by=request.user
+            )
 
         # Calculate updated status for response
         if member.is_complete:
@@ -266,9 +402,14 @@ def update_member_ajaxs(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @login_required
-def add_member_ajaxs(request):
+def add_member_ajaxs(request, org_slug=None):
     """AJAX endpoint for adding new members"""
     try:
+        # Get the tenant from request
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return JsonResponse({'success': False, 'error': 'Organization not found'})
+
         data = json.loads(request.body)
 
         # Validate required fields
@@ -276,26 +417,26 @@ def add_member_ajaxs(request):
         if not name:
             return JsonResponse({'success': False, 'error': 'Name is required'})
 
-        # Check if member already exists
-        if Member.objects.filter(name__iexact=name).exists():
+        # Check if member already exists in THIS organization only
+        if Member.objects.filter(organization=tenant, name__iexact=name).exists():
             return JsonResponse({'success': False, 'error': 'Member with this name already exists'})
 
-        # Create new member
-        member = Member(
-            name=name,
-            phone=data.get('phone_number', '').strip(),
-            year=data.get('year_of_study', '').strip(),
-        )
+        # Get pledge amount (required)
+        pledge = data.get('pledge', 70000)
+        try:
+            pledge = float(pledge)
+            if pledge < 0:
+                return JsonResponse({'success': False, 'error': 'Pledge amount cannot be negative'})
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'error': 'Invalid pledge amount'})
 
-        # Set initial paid amount if user is staff
-        if request.user.is_staff and 'paid_total' in data:
-            try:
-                paid_amount = float(data['paid_total'])
-                if paid_amount < 0:
-                    return JsonResponse({'success': False, 'error': 'Paid amount cannot be negative'})
-                member.paid_total = paid_amount
-            except (ValueError, TypeError):
-                return JsonResponse({'success': False, 'error': 'Invalid paid amount'})
+        # Create new member with organization
+        member = Member(
+            organization=tenant,
+            name=name,
+            pledge=pledge,
+            phone=data.get('phone_number', '').strip(),
+        )
 
         member.save()
 
@@ -306,7 +447,7 @@ def add_member_ajaxs(request):
                 'id': member.id,
                 'name': member.name,
                 'phone': member.phone,
-                'year': member.year,
+                'pledge': member.pledge,
                 'paid_total': member.paid_total,
             }
         })
@@ -319,9 +460,15 @@ def add_member_ajaxs(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @login_required
-def delete_member_ajaxs(request):
-    """AJAX endpoint for deleting members (staff only)"""
-    if not request.user.is_staff:
+def delete_member_ajaxs(request, org_slug=None):
+    """AJAX endpoint for deleting members (admin only)"""
+    # Get the tenant from request first
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'success': False, 'error': 'Organization not found'})
+    
+    # Check if user is admin or owner
+    if not is_org_admin(request.user, tenant):
         return JsonResponse({'success': False, 'error': 'Permission denied'})
 
     try:
@@ -332,7 +479,8 @@ def delete_member_ajaxs(request):
             return JsonResponse({'success': False, 'error': 'Member ID is required'})
 
         try:
-            member = Member.objects.get(id=member_id)
+            # Filter by organization for data isolation
+            member = Member.objects.get(id=member_id, organization=tenant)
             member_name = member.name
             member.delete()
 
@@ -414,17 +562,28 @@ def toggle_member_status_ajax(request):
         })
 
 @login_required
-def export_excel(request):
-    """Export all members data to Excel with styling"""
+def export_excel(request, org_slug=None):
+    """Export all members data to Excel with styling - ORGANIZATION DATA ONLY"""
     try:
+        # Get tenant from request for data isolation
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            messages.error(request, 'Organization not found')
+            return redirect_to_dashboard(request)
+        
+        # Check if user is member of this organization
+        if not OrganizationUser.objects.filter(user=request.user, organization=tenant, is_active=True).exists():
+            messages.error(request, 'You are not a member of this organization')
+            return redirect_to_dashboard(request)
+        
         # Get all members with the same filtering logic as dashboard
         search_query = request.GET.get('search', '')
         filter_status = request.GET.get('filter', '')
 
-        # Get members (using same logic as dashboard)
+        # Get members FOR THIS ORGANIZATION ONLY
         members = []
         try:
-            all_members = Member.objects.all()
+            all_members = Member.objects.filter(organization=tenant)
             for member in all_members:
                 try:
                     if member.pledge is None or member.paid_total is None:
@@ -476,6 +635,23 @@ def export_excel(request):
         ws = wb.active
         ws.title = "Members Data"
 
+        # Add organization header
+        ws.merge_cells('A1:J1')
+        org_header = ws['A1']
+        org_header.value = f"{tenant.name} - Members Report"
+        org_header.font = Font(bold=True, size=14, color="FFFFFF")
+        org_header.fill = PatternFill(start_color="2c3e50", end_color="2c3e50", fill_type="solid")
+        org_header.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 25
+        
+        # Add export date
+        ws.merge_cells('A2:J2')
+        date_cell = ws['A2']
+        date_cell.value = f"Exported on {date.today().strftime('%B %d, %Y')}"
+        date_cell.font = Font(italic=True, size=10, color="666666")
+        date_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[2].height = 15
+
         # Define styles
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
@@ -488,21 +664,21 @@ def export_excel(request):
         center_alignment = Alignment(horizontal='center', vertical='center')
         currency_alignment = Alignment(horizontal='right', vertical='center')
 
-        # Headers
+        # Headers (starting at row 4 after org header and date)
         headers = [
             'Name', 'Phone', 'Email', 'Course', 'Year',
             'Pledge Amount', 'Paid Amount', 'Balance', 'Status', 'Progress %'
         ]
 
         for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
+            cell = ws.cell(row=4, column=col, value=header)
             cell.font = header_font
             cell.fill = header_fill
             cell.border = border
             cell.alignment = center_alignment
 
-        # Data rows
-        for row_num, member in enumerate(members, 2):
+        # Data rows (starting at row 5)
+        for row_num, member in enumerate(members, 5):
             try:
                 pledge = member.pledge if member.pledge is not None else Decimal('70000.00')
                 paid = member.paid_total if member.paid_total is not None else Decimal('0.00')
@@ -569,7 +745,11 @@ def export_excel(request):
         total_members = len(members)
         total_pledged = sum(member.pledge or Decimal('70000.00') for member in members)
         total_collected = sum(member.paid_total or Decimal('0.00') for member in members)
-        target_amount = Decimal('11000000.00')
+        # Get organization's target amount from theme
+        try:
+            target_amount = Decimal(str(tenant.theme.target_amount))
+        except:
+            target_amount = Decimal('210000.00')
         progress_percentage = (total_collected / target_amount * 100) if target_amount > 0 else 0
 
         # Summary data
@@ -599,26 +779,39 @@ def export_excel(request):
             output.read(),
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        filename = f"members_data_{date.today().strftime('%Y%m%d')}.xlsx"
+        # Include organization name in filename
+        org_name_slug = tenant.slug.replace('-', '_')
+        filename = f"{org_name_slug}_members_data_{date.today().strftime('%Y%m%d')}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
         return response
 
     except Exception as e:
         messages.error(request, f"Error exporting Excel: {str(e)}")
-        return redirect('tracker:dashboard')
+        return redirect_to_dashboard(request)
 @login_required
-def export_pdf(request):
-    """Export all members data to PDF with styling, logo, and dynamic headings"""
+def export_pdf(request, org_slug=None):
+    """Export all members data to PDF with styling, logo, and dynamic headings - ORGANIZATION DATA ONLY"""
     try:
+        # Get tenant from request for data isolation
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            messages.error(request, 'Organization not found')
+            return redirect_to_dashboard(request)
+        
+        # Check if user is member of this organization
+        if not OrganizationUser.objects.filter(user=request.user, organization=tenant, is_active=True).exists():
+            messages.error(request, 'You are not a member of this organization')
+            return redirect_to_dashboard(request)
+        
         # Get all members with the same filtering logic as dashboard
         search_query = request.GET.get('search', '')
         filter_status = request.GET.get('filter', '')
 
-        # Get members (using same logic as dashboard)
+        # Get members FOR THIS ORGANIZATION ONLY
         members = []
         try:
-            all_members = Member.objects.all()
+            all_members = Member.objects.filter(organization=tenant)
             for member in all_members:
                 try:
                     if member.pledge is None or member.paid_total is None:
@@ -701,8 +894,8 @@ def export_pdf(request):
             textColor=colors.HexColor('#3498db')
         )
 
-        # Dynamic title based on filters
-        base_title = "MEMBERS REPORT:MLALI MISSION"
+        # Dynamic title based on filters - Use organization name
+        base_title = f"MEMBERS REPORT: {tenant.name.upper()}"
 
         # Add filter information to title
         filter_info = []
@@ -739,7 +932,11 @@ def export_pdf(request):
         total_members = len(members)
         total_pledged = sum(member.pledge or Decimal('70000.00') for member in members)
         total_collected = sum(member.paid_total or Decimal('0.00') for member in members)
-        target_amount = Decimal('11000000.00')
+        # Get organization's target amount from theme
+        try:
+            target_amount = Decimal(str(tenant.theme.target_amount))
+        except:
+            target_amount = Decimal('210000.00')
         progress_percentage = (total_collected / target_amount * 100) if target_amount > 0 else 0
 
         summary_data = [
@@ -861,47 +1058,30 @@ def export_pdf(request):
                     # For smaller tables, just add normally
                     elements.append(table)
 
-# Custom page template with logo
+# Custom page template with organization logo and watermark
         def add_logo_and_header(canvas, doc):
-            """Add logo and header to each page"""
+            """Add organization logo, header, and watermark to each page"""
+            from django.conf import settings
+            import os
+            from reportlab.lib.utils import ImageReader
+            from PIL import Image
+            
             canvas.saveState()
 
             # Set white background for entire page
             canvas.setFillColor(colors.white)
             canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
 
-            # Add logo (if exists)
+            # Try to add organization logo first
             logo_path = None
-            # Try different common logo locations
-            logo_locations = [
-                'static/images/logo.png',
-                'static/images/logo.jpg',
-                'static/img/logo.png',
-                'static/img/logo.jpg',
-                'staticfiles/images/logo.png',
-                'staticfiles/images/logo.jpg',
-                'media/logo.png',
-                'media/logo.jpg',
-                'logo.png',
-                'logo.jpg'
-            ]
-
-            for path in logo_locations:
+            if tenant.theme and tenant.theme.logo:
                 try:
-                    from django.conf import settings
-                    import os
-                    full_path = os.path.join(settings.BASE_DIR, path)
-                    if os.path.exists(full_path):
-                        logo_path = full_path
-                        break
+                    logo_path = tenant.theme.logo.path
                 except:
-                    continue
-
-            if logo_path:
+                    logo_path = None
+            
+            if logo_path and os.path.exists(logo_path):
                 try:
-                    from reportlab.lib.utils import ImageReader
-                    from PIL import Image
-
                     # Open image with PIL to handle transparency
                     pil_image = Image.open(logo_path)
 
@@ -931,18 +1111,32 @@ def export_pdf(request):
                     x = (A4[0] - logo_width) / 2  # Center horizontally
                     y = A4[1] - 80  # 80 points from top
 
-                    # Draw the logo
+                    # Draw the organization logo
                     canvas.drawImage(logo, x, y, width=logo_width, height=logo_height)
                 except Exception as e:
                     # If logo fails, add text header instead
                     canvas.setFont('Helvetica-Bold', 14)
                     canvas.setFillColor(colors.HexColor('#2c3e50'))
-                    canvas.drawCentredText(A4[0]/2, A4[1] - 50, "FUNDRAISING REPORT")
+                    canvas.drawCentredString(A4[0]/2, A4[1] - 50, tenant.name.upper())
             else:
-                # No logo found, add text header
+                # No organization logo found, add organization name as header
                 canvas.setFont('Helvetica-Bold', 14)
                 canvas.setFillColor(colors.HexColor('#2c3e50'))
-                canvas.drawCentredText(A4[0]/2, A4[1] - 50, "FUNDRAISING REPORT")
+                canvas.drawCentredString(A4[0]/2, A4[1] - 50, tenant.name.upper())
+            
+            # Add watermark (Bossin or custom watermark text)
+            watermark_text = tenant.theme.watermark_text if tenant.theme else 'Bossin'
+            try:
+                canvas.setFont('Helvetica', 60)
+                canvas.setFillAlpha(0.1)  # 10% opacity
+                canvas.setFillColor(colors.grey)
+                # Rotate and position watermark diagonally
+                canvas.rotate(45)
+                canvas.drawCentredString(A4[0]/2, A4[1]/2, watermark_text)
+                canvas.rotate(-45)
+                canvas.setFillAlpha(1.0)  # Reset opacity
+            except:
+                pass  # Watermark is optional
 
             # Add page number
             canvas.setFont('Helvetica', 9)
@@ -964,8 +1158,9 @@ def export_pdf(request):
 
         response = HttpResponse(pdf_data, content_type='application/pdf')
 
-        # Dynamic filename based on filters
-        filename_parts = ['members_report']
+        # Dynamic filename based on filters - Include organization name
+        org_name_slug = tenant.slug.replace('-', '_')
+        filename_parts = [org_name_slug, 'members_report']
         if filter_status:
             filename_parts.append(filter_status)
         if search_query:
@@ -979,21 +1174,26 @@ def export_pdf(request):
 
     except Exception as e:
         messages.error(request, f"Error exporting PDF: {str(e)}")
-        return redirect('tracker:dashboard')
+        return redirect_to_dashboard(request)
 @csrf_exempt
 @require_http_methods(["POST"])
 @login_required
 def update_transaction_ajax(request):
-    """Update transaction amount and/or note via AJAX"""
+    """Update transaction amount and/or note via AJAX - ORGANIZATION DATA ONLY"""
     try:
+        # Get tenant from request for data isolation
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return JsonResponse({'success': False, 'error': 'Organization not found'})
+        
         data = json.loads(request.body)
         transaction_id = data.get('transaction_id')
         new_amount = data.get('amount')
         new_note = data.get('note', '')
 
-        # Get the transaction
-        transaction = get_object_or_404(Transaction, id=transaction_id)
-
+        # Get the transaction - MUST belong to this organization
+        transaction = get_object_or_404(Transaction, id=transaction_id, organization=tenant)
+        
         # Store old amount for recalculation
         old_amount = transaction.amount
 
@@ -1060,13 +1260,18 @@ def update_transaction_ajax(request):
 @require_http_methods(["POST"])
 @login_required
 def delete_transaction_ajax(request):
-    """Delete transaction via AJAX"""
+    """Delete transaction via AJAX - ORGANIZATION DATA ONLY"""
     try:
+        # Get tenant from request for data isolation
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return JsonResponse({'success': False, 'error': 'Organization not found'})
+        
         data = json.loads(request.body)
         transaction_id = data.get('transaction_id')
 
-        # Get the transaction
-        transaction = get_object_or_404(Transaction, id=transaction_id)
+        # Get the transaction - MUST belong to this organization
+        transaction = get_object_or_404(Transaction, id=transaction_id, organization=tenant)
         member = transaction.member
 
         # Delete the transaction
@@ -1092,10 +1297,17 @@ def delete_transaction_ajax(request):
 
 # Your updated member_detail view
 @login_required
-def member_detail(request, member_id):
-    """Member detail page with transaction history"""
+def member_detail(request, member_id, org_slug=None):
+    """Display member details and transactions"""
     try:
-        member = get_object_or_404(Member, id=member_id)
+        # Get tenant from request for data isolation
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            messages.error(request, 'Organization not found')
+            return redirect('tracker:dashboard')
+
+        # Get member from THIS ORGANIZATION ONLY
+        member = get_object_or_404(Member, id=member_id, organization=tenant)
         transactions = member.transaction_set.all().order_by('-date', '-id')
 
         if request.method == 'POST':
@@ -1156,11 +1368,21 @@ def member_detail(request, member_id):
 
     except Exception as e:
         messages.error(request, f'Error loading member details: {str(e)}')
-        return redirect('tracker:dashboard')
+        return redirect_to_dashboard(request)
+
 def login_view(request):
-    """Custom login view"""
+    """Custom login view with organization membership check"""
     if request.user.is_authenticated:
-        return redirect('tracker:dashboard')
+        # Redirect to user's first organization dashboard
+        from .models import OrganizationUser
+        org_user = OrganizationUser.objects.filter(user=request.user, is_active=True).first()
+        if org_user:
+            return redirect('tracker:dashboard', org_slug=org_user.organization.slug)
+        else:
+            # User is authenticated but not in any active organization
+            messages.error(request, 'Your account is not active in any organization. Please contact your administrator.')
+            logout(request)
+            return render(request, 'tracker/login.html', {'form': CustomLoginForm()})
 
     if request.method == 'POST':
         form = CustomLoginForm(request, data=request.POST)
@@ -1169,9 +1391,17 @@ def login_view(request):
             password = form.cleaned_data.get('password')
             user = authenticate(username=username, password=password)
             if user is not None:
-                login(request, user)
-                messages.success(request, f'Welcome back, {user.username}!')
-                return redirect('tracker:dashboard')
+                # Check if user has active organization membership
+                from .models import OrganizationUser
+                org_user = OrganizationUser.objects.filter(user=user, is_active=True).first()
+                
+                if org_user:
+                    login(request, user)
+                    messages.success(request, f'Welcome back, {user.username}!')
+                    return redirect('tracker:dashboard', org_slug=org_user.organization.slug)
+                else:
+                    # User exists but has no active organization
+                    messages.error(request, 'Your account is not active in any organization. Please contact your administrator.')
             else:
                 messages.error(request, 'Invalid username or password.')
     else:
@@ -1181,7 +1411,7 @@ def login_view(request):
 
 
 @login_required
-def dashboard(request):
+def dashboard(request, org_slug=None):
     """Main dashboard with member table and statistics"""
     # Get filter parameters
     search_query = request.GET.get('search', '')
@@ -1190,7 +1420,7 @@ def dashboard(request):
     # Initialize default values
     total_collected = Decimal('0.00')
     total_pledged = Decimal('0.00')
-    target_amount = Decimal('11000000.00')  # 11M target
+    target_amount = Decimal('210000.00')  # Default target
     progress_percentage = 0
     not_paid_count = 0
     incomplete_count = 0
@@ -1200,11 +1430,23 @@ def dashboard(request):
     members = []
 
     try:
-        # Get all members with individual error handling
+        # Get tenant from request for data isolation
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            messages.error(request, 'Organization not found')
+            return redirect('tracker:dashboard')
+        
+        # Get organization's target amount from theme
+        try:
+            target_amount = Decimal(str(tenant.theme.target_amount))
+        except:
+            target_amount = Decimal('210000.00')
+
+        # Get members for THIS ORGANIZATION ONLY with individual error handling
         members = []
         try:
-            # Try to get all members at once
-            all_members = Member.objects.all()
+            # Try to get members for this organization
+            all_members = Member.objects.filter(organization=tenant)
             for member in all_members:
                 try:
                     # Verify each member's decimal fields are valid
@@ -1223,10 +1465,10 @@ def dashboard(request):
         except Exception as e:
             # If bulk query fails, get members one by one
             try:
-                member_ids = Member.objects.values_list('id', flat=True)
+                member_ids = Member.objects.filter(organization=tenant).values_list('id', flat=True)
                 for member_id in member_ids:
                     try:
-                        member = Member.objects.get(id=member_id)
+                        member = Member.objects.get(id=member_id, organization=tenant)
                         # Fix any invalid decimal values
                         if member.pledge is None:
                             member.pledge = Decimal('70000.00')
@@ -1342,14 +1584,22 @@ def dashboard(request):
 
 
 @login_required
-def add_member(request):
-    """Add new member"""
+def add_member(request, org_slug=None):
+    """Add new member - ORGANIZATION DATA ONLY"""
+    # Get tenant from request for data isolation
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        messages.error(request, 'Organization not found')
+        return redirect_to_dashboard(request)
+    
     if request.method == 'POST':
         form = MemberForm(request.POST)
         if form.is_valid():
-            member = form.save()
+            member = form.save(commit=False)
+            member.organization = tenant  # Assign to current organization
+            member.save()
             messages.success(request, f'Member "{member.name}" added successfully!')
-            return redirect('tracker:member_detail', member_id=member.id)
+            return redirect('tracker:member_detail', member_id=member.id, org_slug=org_slug)
     else:
         form = MemberForm()
 
@@ -1467,16 +1717,23 @@ def delete_transaction_ajax(request):
 
 # Update your existing edit_member view to include the transaction form
 @login_required
-def edit_member(request, member_id):
-    """Edit member details"""
-    member = get_object_or_404(Member, id=member_id)
+def edit_member(request, member_id, org_slug=None):
+    """Edit member details - ORGANIZATION DATA ONLY"""
+    # Get tenant from request for data isolation
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        messages.error(request, 'Organization not found')
+        return redirect_to_dashboard(request)
+    
+    # Get member from THIS ORGANIZATION ONLY
+    member = get_object_or_404(Member, id=member_id, organization=tenant)
 
     if request.method == 'POST':
         form = MemberForm(request.POST, instance=member)
         if form.is_valid():
             form.save()
             messages.success(request, f'Member "{member.name}" updated successfully!')
-            return redirect('tracker:member_detail', member_id=member.id)
+            return redirect('tracker:member_detail', member_id=member.id, org_slug=org_slug)
     else:
         form = MemberForm(instance=member)
 
@@ -1491,8 +1748,14 @@ from .models import Member, Transaction
 from .forms import ExcelImportForm
 
 @login_required
-def import_excel(request):
-    """Import members and payment transactions from an Excel file."""
+def import_excel(request, org_slug=None):
+    """Import members and payment transactions from an Excel file - ORGANIZATION DATA ONLY"""
+    # Get tenant from request for data isolation
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        messages.error(request, 'Organization not found')
+        return redirect_to_dashboard(request)
+    
     if request.method == 'POST':
         form = ExcelImportForm(request.POST, request.FILES)
         if form.is_valid():
@@ -1539,6 +1802,7 @@ def import_excel(request):
                         member_created = False
                         if update_existing:
                             member, member_created = Member.objects.update_or_create(
+                                organization=tenant,
                                 name=name,
                                 defaults={
                                     'pledge': pledge,
@@ -1549,9 +1813,10 @@ def import_excel(request):
                                 }
                             )
                         else:
-                            member = Member.objects.filter(name=name).first()
+                            member = Member.objects.filter(organization=tenant, name=name).first()
                             if not member:
                                 member = Member.objects.create(
+                                    organization=tenant,
                                     name=name,
                                     pledge=pledge,
                                     phone=phone or None,
@@ -1572,6 +1837,7 @@ def import_excel(request):
                         # Transaction
                         if paid > 0:
                             existing_txn = Transaction.objects.filter(
+                                organization=tenant,
                                 member=member,
                                 date=date.today(),
                                 added_by=request.user,
@@ -1588,6 +1854,7 @@ def import_excel(request):
                             else:
                                 # Create new transaction
                                 Transaction.objects.create(
+                                    organization=tenant,
                                     member=member,
                                     amount=paid,
                                     date=date.today(),
@@ -1613,7 +1880,7 @@ def import_excel(request):
                     if len(errors) > 5:
                         messages.warning(request, f"...and {len(errors) - 5} more issues.")
 
-                return redirect('tracker:dashboard')
+                return redirect_to_dashboard(request)
 
             except Exception as e:
                 messages.error(request, f"📄 Excel reading error: {str(e)}")
@@ -1628,9 +1895,16 @@ def import_excel(request):
 
 
 @login_required
-def admin_log(request):
+def admin_log(request, org_slug=None):
     """Admin log showing all transactions"""
-    transactions = Transaction.objects.select_related('member', 'added_by').all()
+    # Get tenant from request for data isolation
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        messages.error(request, 'Organization not found')
+        return redirect('tracker:dashboard')
+
+    # Get transactions for THIS ORGANIZATION ONLY
+    transactions = Transaction.objects.select_related('member', 'added_by').filter(member__organization=tenant)
     # Apply filters
     boss_filter = request.GET.get('boss', '')
     date_filter = request.GET.get('date', '')
@@ -1652,6 +1926,28 @@ def admin_log(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    # Get member edit logs (owner only)
+    member_edit_logs = []
+    is_owner = is_org_owner(request.user, tenant)
+    if is_owner:
+        member_edit_logs = MemberEditLog.objects.select_related('member', 'edited_by').filter(
+            organization=tenant
+        ).order_by('-created_at')
+        
+        # Apply filters for member edit logs
+        edit_member_filter = request.GET.get('edit_member', '')
+        edit_field_filter = request.GET.get('edit_field', '')
+        
+        if edit_member_filter:
+            member_edit_logs = member_edit_logs.filter(member__name__icontains=edit_member_filter)
+        if edit_field_filter:
+            member_edit_logs = member_edit_logs.filter(field_changed=edit_field_filter)
+        
+        # Pagination for member edit logs
+        edit_paginator = Paginator(member_edit_logs, 25)
+        edit_page_number = request.GET.get('edit_page')
+        member_edit_logs = edit_paginator.get_page(edit_page_number)
+
     context = {
         'page_obj': page_obj,
         'transactions': page_obj,
@@ -1659,6 +1955,10 @@ def admin_log(request):
         'date_filter': date_filter,
         'amount_filter': amount_filter,
         'can_edit': request.user.is_staff,  # Simple check
+        'member_edit_logs': member_edit_logs,
+        'is_owner': is_owner,
+        'edit_member_filter': edit_member_filter if is_owner else '',
+        'edit_field_filter': edit_field_filter if is_owner else '',
     }
 
     return render(request, 'tracker/admin_log.html', context)
@@ -1754,17 +2054,23 @@ def add_member_ajax(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-@login_required
-@require_POST
 @csrf_exempt
-def update_transaction_note_ajax(request):
-    """AJAX endpoint for updating transaction notes"""
+@require_http_methods(["POST"])
+@login_required
+def update_transaction_note_ajax(request, org_slug=None):
+    """AJAX endpoint for updating transaction notes - ORGANIZATION DATA ONLY"""
     try:
+        # Get tenant from request for data isolation
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return JsonResponse({'success': False, 'error': 'Organization not found'})
+        
         data = json.loads(request.body)
         transaction_id = data.get('transaction_id')
         note = data.get('note', '')
 
-        transaction = get_object_or_404(Transaction, id=transaction_id)
+        # Get the transaction - MUST belong to this organization
+        transaction = get_object_or_404(Transaction, id=transaction_id, organization=tenant)
         transaction.note = note
         transaction.save()
 
@@ -1775,8 +2081,8 @@ def update_transaction_note_ajax(request):
 
 
 
-@staff_member_required
-def daily_collection(request):
+@org_admin_required
+def daily_collection(request, org_slug=None):
     """Daily collection page for recording payments"""
     # Get filter parameters
     search_query = request.GET.get('search', '')
@@ -1785,7 +2091,7 @@ def daily_collection(request):
     # Initialize default values
     total_collected = Decimal('0.00')
     total_pledged = Decimal('0.00')
-    target_amount = Decimal('11000000.00')  # 11M target
+    target_amount = Decimal('210000.00')  # Default target
     progress_percentage = 0
     not_paid_count = 0
     incomplete_count = 0
@@ -1795,11 +2101,23 @@ def daily_collection(request):
     members = []
 
     try:
-        # Get all members with individual error handling
+        # Get tenant from request for data isolation
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            messages.error(request, 'Organization not found')
+            return redirect('tracker:dashboard')
+        
+        # Get organization's target amount from theme
+        try:
+            target_amount = Decimal(str(tenant.theme.target_amount))
+        except:
+            target_amount = Decimal('210000.00')
+
+        # Get members for THIS ORGANIZATION ONLY with individual error handling
         members = []
         try:
-            # Try to get all members at once
-            all_members = Member.objects.all()
+            # Try to get members for this organization
+            all_members = Member.objects.filter(organization=tenant)
             for member in all_members:
                 try:
                     # Verify each member's decimal fields are valid
@@ -1818,10 +2136,10 @@ def daily_collection(request):
         except Exception as e:
             # If bulk query fails, get members one by one
             try:
-                member_ids = Member.objects.values_list('id', flat=True)
+                member_ids = Member.objects.filter(organization=tenant).values_list('id', flat=True)
                 for member_id in member_ids:
                     try:
-                        member = Member.objects.get(id=member_id)
+                        member = Member.objects.get(id=member_id, organization=tenant)
                         # Fix any invalid decimal values
                         if member.pledge is None:
                             member.pledge = Decimal('70000.00')
@@ -1998,10 +2316,10 @@ def daily_collection(request):
     return render(request, 'tracker/daily_collection.html', context)
 
 
-@login_required
+@org_staff_required
 @require_POST
 @csrf_exempt
-def record_daily_payment_ajax(request):
+def record_daily_payment_ajax(request, org_slug=None):
     """AJAX endpoint for recording daily payments"""
     try:
         data = json.loads(request.body)
@@ -2058,7 +2376,713 @@ def record_daily_payment_ajax(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
+# ============================================================================
+# ORGANIZATION ADMIN DASHBOARD VIEWS
+# ============================================================================
+
+from .permissions import org_admin_required
+from .forms import OrganizationSettingsForm, OrganizationThemeForm, OrganizationUserForm, AddOrganizationUserForm
+
+@org_admin_required
+def org_admin_dashboard(request, org_slug=None):
+    """Organization admin dashboard - main page"""
+    tenant = request.tenant
+    
+    # Get organization stats
+    members_count = Member.objects.filter(organization=tenant).count()
+    staff_count = OrganizationUser.objects.filter(organization=tenant, is_active=True).count()
+    transactions_count = Transaction.objects.filter(organization=tenant).count()
+    
+    # Get total collected
+    total_collected = Transaction.objects.filter(organization=tenant).aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0.00')
+    
+    context = {
+        'organization': tenant,
+        'members_count': members_count,
+        'staff_count': staff_count,
+        'transactions_count': transactions_count,
+        'total_collected': total_collected,
+    }
+    
+    return render(request, 'tracker/org_admin/dashboard.html', context)
+
+
+@org_admin_required
+def org_settings(request, org_slug=None):
+    """Edit organization settings"""
+    tenant = request.tenant
+    
+    if request.method == 'POST':
+        form = OrganizationSettingsForm(request.POST, instance=tenant)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Organization settings updated successfully!')
+            return redirect('tracker:org_settings', org_slug=org_slug)
+    else:
+        form = OrganizationSettingsForm(instance=tenant)
+    
+    context = {
+        'form': form,
+        'organization': tenant,
+    }
+    
+    return render(request, 'tracker/org_admin/settings.html', context)
+
+
+@org_admin_required
+def org_branding(request, org_slug=None):
+    """Edit organization branding and theme"""
+    tenant = request.tenant
+    
+    theme = tenant.theme
+    
+    if request.method == 'POST':
+        form = OrganizationThemeForm(request.POST, request.FILES, instance=theme)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Branding and theme updated successfully!')
+            return redirect('tracker:org_branding', org_slug=org_slug)
+    else:
+        form = OrganizationThemeForm(instance=theme)
+    
+    context = {
+        'form': form,
+        'organization': tenant,
+        'theme': theme,
+    }
+    
+    return render(request, 'tracker/org_admin/branding.html', context)
+
+
+@org_admin_required
+def org_financial_settings(request, org_slug=None):
+    """Edit organization financial settings (default pledge and target amount)"""
+    tenant = request.tenant
+    theme = tenant.theme
+    
+    if request.method == 'POST':
+        try:
+            default_pledge = Decimal(request.POST.get('default_pledge_amount', 0))
+            target_amount = Decimal(request.POST.get('target_amount', 0))
+            
+            if default_pledge < 0 or target_amount < 0:
+                messages.error(request, 'Amounts must be positive numbers.')
+            else:
+                theme.default_pledge_amount = default_pledge
+                theme.target_amount = target_amount
+                theme.save()
+                messages.success(request, 'Financial settings updated successfully!')
+                return redirect('tracker:org_financial_settings', org_slug=org_slug)
+        except (ValueError, InvalidOperation):
+            messages.error(request, 'Please enter valid numbers for the amounts.')
+    
+    context = {
+        'organization': tenant,
+        'theme': theme,
+        'default_pledge_amount': float(theme.default_pledge_amount),
+        'target_amount': float(theme.target_amount),
+    }
+    
+    return render(request, 'tracker/org_admin/financial_settings.html', context)
+
+
+@org_admin_required
+def org_staff_management(request, org_slug=None):
+    """Manage organization staff and users"""
+    tenant = request.tenant
+    
+    # Get all staff members
+    staff_members = OrganizationUser.objects.filter(organization=tenant).select_related('user')
+    
+    context = {
+        'organization': tenant,
+        'staff_members': staff_members,
+    }
+    
+    return render(request, 'tracker/org_admin/staff_management.html', context)
+
+
+@org_admin_required
+def add_staff_member(request, org_slug=None):
+    """Add new staff member to organization - creates user on-the-fly"""
+    tenant = request.tenant
+    
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        role = request.POST.get('role', 'staff')
+        
+        if not username or not password:
+            messages.error(request, 'Username and password are required.')
+            return redirect('tracker:add_staff_member', org_slug=org_slug)
+        
+        try:
+            # Check if user already exists in organization
+            if OrganizationUser.objects.filter(user__username=username, organization=tenant).exists():
+                messages.error(request, f'User "{username}" is already a member of this organization.')
+                return redirect('tracker:add_staff_member', org_slug=org_slug)
+            
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                password=password
+            )
+            
+            # Create organization user
+            OrganizationUser.objects.create(
+                user=user,
+                organization=tenant,
+                role=role,
+                is_active=True
+            )
+            
+            messages.success(request, f'Staff member "{username}" added successfully with role "{role}"!')
+            return redirect('tracker:org_staff_management', org_slug=org_slug)
+                    
+        except Exception as e:
+            messages.error(request, f'Error adding staff member: {str(e)}')
+            return redirect('tracker:add_staff_member', org_slug=org_slug)
+    
+    staff_members = tenant.staff_members.all()
+    context = {
+        'organization': tenant,
+        'staff_members': staff_members,
+    }
+    
+    return render(request, 'tracker/org_admin/add_staff_new.html', context)
+
+
+@org_admin_required
+def edit_staff_member(request, org_slug=None, staff_id=None):
+    """Edit staff member role and status"""
+    tenant = request.tenant
+    
+    org_user = get_object_or_404(OrganizationUser, id=staff_id, organization=tenant)
+    
+    if request.method == 'POST':
+        form = OrganizationUserForm(request.POST, instance=org_user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'User "{org_user.user.username}" updated successfully!')
+            return redirect('tracker:org_staff_management', org_slug=org_slug)
+    else:
+        form = OrganizationUserForm(instance=org_user)
+    
+    # Hide owner role option for non-owners
+    is_owner = is_org_owner(request.user, tenant)
+    if not is_owner:
+        # Remove 'owner' option from role choices
+        form.fields['role'].choices = [
+            (choice[0], choice[1]) for choice in form.fields['role'].choices 
+            if choice[0] != 'owner'
+        ]
+    
+    context = {
+        'form': form,
+        'organization': tenant,
+        'org_user': org_user,
+    }
+    
+    return render(request, 'tracker/org_admin/edit_staff.html', context)
+
+
+@org_admin_required
+@require_POST
+def remove_staff_member(request, org_slug=None, staff_id=None):
+    """Remove staff member from organization"""
+    tenant = request.tenant
+    
+    org_user = get_object_or_404(OrganizationUser, id=staff_id, organization=tenant)
+    username = org_user.user.username
+    
+    # Prevent removing the last owner
+    owner_count = OrganizationUser.objects.filter(
+        organization=tenant,
+        role='owner',
+        is_active=True
+    ).count()
+    
+    if org_user.role == 'owner' and owner_count <= 1:
+        messages.error(request, 'Cannot remove the last owner of the organization.')
+    else:
+        org_user.delete()
+        messages.success(request, f'User "{username}" removed from organization.')
+    
+    return redirect('tracker:org_staff_management', org_slug=org_slug)
+
 
 def offline_view(request):
     """Offline page for PWA"""
     return render(request, 'offline.html')
+
+
+# ============================================================================
+# ONBOARDING FLOW VIEWS
+# ============================================================================
+
+@login_required
+def onboarding_financial(request, org_slug):
+    """Step 1: Financial Settings"""
+    try:
+        organization = Organization.objects.get(slug=org_slug)
+        theme = organization.theme
+    except Organization.DoesNotExist:
+        messages.error(request, 'Organization not found.')
+        return redirect('tracker:landing')
+    
+    if request.method == 'POST':
+        default_pledge = request.POST.get('default_pledge_amount', theme.default_pledge_amount)
+        target_amount = request.POST.get('target_amount', theme.target_amount)
+        
+        try:
+            theme.default_pledge_amount = Decimal(default_pledge)
+            theme.target_amount = Decimal(target_amount)
+            theme.save()
+            messages.success(request, 'Financial settings saved!')
+        except Exception as e:
+            messages.error(request, f'Error saving settings: {str(e)}')
+        
+        # Redirect to next step
+        return redirect('tracker:onboarding_branding', org_slug=org_slug)
+    
+    context = {
+        'organization': organization,
+        'theme': theme,
+        'step': 1,
+        'total_steps': 4
+    }
+    return render(request, 'tracker/onboarding/financial.html', context)
+
+
+@login_required
+def onboarding_branding(request, org_slug):
+    """Step 2: Organization Branding & Theme"""
+    try:
+        organization = Organization.objects.get(slug=org_slug)
+        theme = organization.theme
+    except Organization.DoesNotExist:
+        messages.error(request, 'Organization not found.')
+        return redirect('tracker:landing')
+    
+    if request.method == 'POST':
+        try:
+            theme.primary_color = request.POST.get('primary_color', theme.primary_color)
+            theme.secondary_color = request.POST.get('secondary_color', theme.secondary_color)
+            theme.success_color = request.POST.get('success_color', theme.success_color)
+            theme.warning_color = request.POST.get('warning_color', theme.warning_color)
+            theme.danger_color = request.POST.get('danger_color', theme.danger_color)
+            theme.navbar_title = request.POST.get('navbar_title', theme.navbar_title)
+            theme.watermark_text = request.POST.get('watermark_text', theme.watermark_text)
+            
+            if 'logo' in request.FILES:
+                theme.logo = request.FILES['logo']
+            
+            theme.save()
+            messages.success(request, 'Branding settings saved!')
+        except Exception as e:
+            messages.error(request, f'Error saving branding: {str(e)}')
+        
+        # Redirect to next step
+        return redirect('tracker:onboarding_staff', org_slug=org_slug)
+    
+    context = {
+        'organization': organization,
+        'theme': theme,
+        'step': 2,
+        'total_steps': 4
+    }
+    return render(request, 'tracker/onboarding/branding.html', context)
+
+
+@login_required
+def onboarding_staff(request, org_slug):
+    """Step 3: Staff Management"""
+    try:
+        organization = Organization.objects.get(slug=org_slug)
+    except Organization.DoesNotExist:
+        messages.error(request, 'Organization not found.')
+        return redirect('tracker:landing')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'add_staff':
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '').strip()
+            role = request.POST.get('role', 'staff')
+            
+            if not username or not password:
+                messages.error(request, 'Username and password are required.')
+                return redirect('tracker:onboarding_staff', org_slug=org_slug)
+            
+            try:
+                # Create user
+                user = User.objects.create_user(
+                    username=username,
+                    password=password
+                )
+                
+                # Add to organization
+                OrganizationUser.objects.create(
+                    user=user,
+                    organization=organization,
+                    role=role,
+                    is_active=True
+                )
+                
+                messages.success(request, f'Staff member "{username}" added successfully!')
+            except Exception as e:
+                messages.error(request, f'Error adding staff: {str(e)}')
+        
+        # Redirect to next step
+        return redirect('tracker:onboarding_import', org_slug=org_slug)
+    
+    staff_members = organization.staff_members.all()
+    context = {
+        'organization': organization,
+        'staff_members': staff_members,
+        'step': 3,
+        'total_steps': 4
+    }
+    return render(request, 'tracker/onboarding/staff.html', context)
+
+
+@login_required
+def onboarding_import(request, org_slug):
+    """Step 4: Import Members (Optional)"""
+    try:
+        organization = Organization.objects.get(slug=org_slug)
+    except Organization.DoesNotExist:
+        messages.error(request, 'Organization not found.')
+        return redirect('tracker:landing')
+    
+    if request.method == 'POST':
+        # Skip import and go to dashboard
+        return redirect('tracker:dashboard', org_slug=org_slug)
+    
+    context = {
+        'organization': organization,
+        'step': 4,
+        'total_steps': 4
+    }
+    return render(request, 'tracker/onboarding/import.html', context)
+
+
+# ============================================================================
+# ERROR HANDLERS
+# ============================================================================
+
+def custom_404(request, exception=None):
+    """Custom 404 error page handler"""
+    return render(request, '404.html', {'exception': exception}, status=404)
+
+
+def custom_500(request):
+    """Custom 500 error page handler"""
+    return render(request, '500.html', status=500)
+
+
+@login_required
+def export_admin_log_excel(request, org_slug=None):
+    """Export admin log transactions to Excel"""
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        messages.error(request, 'Organization not found')
+        return redirect('tracker:dashboard')
+
+    # Get filtered transactions
+    transactions = Transaction.objects.select_related('member', 'added_by').filter(member__organization=tenant)
+
+    # Apply filters
+    boss_filter = request.GET.get('boss', '')
+    date_filter = request.GET.get('date', '')
+    amount_filter = request.GET.get('amount', '')
+
+    if boss_filter:
+        transactions = transactions.filter(added_by__username__icontains=boss_filter)
+    if date_filter:
+        transactions = transactions.filter(date=date_filter)
+    if amount_filter:
+        try:
+            amount = Decimal(amount_filter)
+            transactions = transactions.filter(amount=amount)
+        except:
+            pass
+
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Admin Log - Transactions"
+
+    # Header
+    headers = ['Date', 'Member Name', 'Amount (TZS)', 'Added By', 'Note']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="FFCC99", end_color="FFCC99", fill_type="solid")
+
+    # Data
+    for row, transaction in enumerate(transactions, 2):
+        ws.cell(row=row, column=1, value=transaction.date.strftime('%Y-%m-%d'))
+        ws.cell(row=row, column=2, value=transaction.member.name)
+        ws.cell(row=row, column=3, value=float(transaction.amount))
+        ws.cell(row=row, column=4, value=transaction.added_by.username)
+        ws.cell(row=row, column=5, value=transaction.note or '')
+
+    # Auto-adjust column widths
+    for col in range(1, 6):
+        max_length = 0
+        column_letter = get_column_letter(col)
+        for row in range(1, len(transactions) + 2):
+            cell_value = str(ws[f'{column_letter}{row}'].value or '')
+            max_length = max(max_length, len(cell_value))
+        ws.column_dimensions[column_letter].width = min(max_length + 2, 50)
+
+    # Response
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="admin_log_{tenant.slug}_{date.today().isoformat()}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+def export_admin_log_pdf(request, org_slug=None):
+    """Export admin log transactions to PDF"""
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        messages.error(request, 'Organization not found')
+        return redirect('tracker:dashboard')
+
+    # Get filtered transactions
+    transactions = Transaction.objects.select_related('member', 'added_by').filter(member__organization=tenant)
+
+    # Apply filters
+    boss_filter = request.GET.get('boss', '')
+    date_filter = request.GET.get('date', '')
+    amount_filter = request.GET.get('amount', '')
+
+    if boss_filter:
+        transactions = transactions.filter(added_by__username__icontains=boss_filter)
+    if date_filter:
+        transactions = transactions.filter(date=date_filter)
+    if amount_filter:
+        try:
+            amount = Decimal(amount_filter)
+            transactions = transactions.filter(amount=amount)
+        except:
+            pass
+
+    # Create PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+
+    # Get styles
+    styles = getSampleStyleSheet()
+
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1
+    )
+    elements.append(Paragraph(f"Admin Log - Transaction History<br/>{tenant.name}", title_style))
+    elements.append(Spacer(1, 12))
+
+    # Table data
+    data = [['Date', 'Member', 'Amount', 'Added By', 'Note']]
+    for transaction in transactions:
+        data.append([
+            transaction.date.strftime('%Y-%m-%d'),
+            transaction.member.name,
+            f"TZS {transaction.amount:,.0f}",
+            transaction.added_by.username,
+            transaction.note or ''
+        ])
+
+    # Table style
+    table_style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7492b9')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ])
+
+    # Create table
+    table = Table(data, colWidths=[80, 100, 80, 80, 150])
+    table.setStyle(table_style)
+    elements.append(table)
+
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="admin_log_{tenant.slug}_{date.today().isoformat()}.pdf"'
+    return response
+
+
+@login_required
+def export_member_edit_log_excel(request, org_slug=None):
+    """Export member edit logs to Excel"""
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        messages.error(request, 'Organization not found')
+        return redirect('tracker:dashboard')
+
+    # Check if user is owner
+    is_owner = is_org_owner(request.user, tenant)
+    if not is_owner:
+        messages.error(request, 'Access denied. Owner privileges required.')
+        return redirect('tracker:admin_log', org_slug=org_slug)
+
+    # Get filtered member edit logs
+    member_edit_logs = MemberEditLog.objects.select_related('member', 'edited_by').filter(
+        organization=tenant
+    ).order_by('-created_at')
+
+    # Apply filters
+    edit_member_filter = request.GET.get('edit_member', '')
+    edit_field_filter = request.GET.get('edit_field', '')
+
+    if edit_member_filter:
+        member_edit_logs = member_edit_logs.filter(member__name__icontains=edit_member_filter)
+    if edit_field_filter:
+        member_edit_logs = member_edit_logs.filter(field_changed=edit_field_filter)
+
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Member Edit Log"
+
+    # Header
+    headers = ['Date & Time', 'Member', 'Field Changed', 'Before', 'After', 'Done By']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="FFCC99", end_color="FFCC99", fill_type="solid")
+
+    # Data
+    for row, log in enumerate(member_edit_logs, 2):
+        ws.cell(row=row, column=1, value=log.created_at.strftime('%Y-%m-%d %H:%M'))
+        ws.cell(row=row, column=2, value=log.member.name)
+        ws.cell(row=row, column=3, value=log.field_changed.title())
+        ws.cell(row=row, column=4, value=log.before_value or '')
+        ws.cell(row=row, column=5, value=log.after_value or '')
+        ws.cell(row=row, column=6, value=log.edited_by.username)
+
+    # Auto-adjust column widths
+    for col in range(1, 7):
+        max_length = 0
+        column_letter = get_column_letter(col)
+        for row in range(1, len(member_edit_logs) + 2):
+            cell_value = str(ws[f'{column_letter}{row}'].value or '')
+            max_length = max(max_length, len(cell_value))
+        ws.column_dimensions[column_letter].width = min(max_length + 2, 50)
+
+    # Response
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="member_edit_log_{tenant.slug}_{date.today().isoformat()}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+def export_member_edit_log_pdf(request, org_slug=None):
+    """Export member edit logs to PDF"""
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        messages.error(request, 'Organization not found')
+        return redirect('tracker:dashboard')
+
+    # Check if user is owner
+    is_owner = is_org_owner(request.user, tenant)
+    if not is_owner:
+        messages.error(request, 'Access denied. Owner privileges required.')
+        return redirect('tracker:admin_log', org_slug=org_slug)
+
+    # Get filtered member edit logs
+    member_edit_logs = MemberEditLog.objects.select_related('member', 'edited_by').filter(
+        organization=tenant
+    ).order_by('-created_at')
+
+    # Apply filters
+    edit_member_filter = request.GET.get('edit_member', '')
+    edit_field_filter = request.GET.get('edit_field', '')
+
+    if edit_member_filter:
+        member_edit_logs = member_edit_logs.filter(member__name__icontains=edit_member_filter)
+    if edit_field_filter:
+        member_edit_logs = member_edit_logs.filter(field_changed=edit_field_filter)
+
+    # Create PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+
+    # Get styles
+    styles = getSampleStyleSheet()
+
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1
+    )
+    elements.append(Paragraph(f"Member Edit Log<br/>{tenant.name}", title_style))
+    elements.append(Spacer(1, 12))
+
+    # Table data
+    data = [['Date & Time', 'Member', 'Field Changed', 'Before', 'After', 'Done By']]
+    for log in member_edit_logs:
+        data.append([
+            log.created_at.strftime('%Y-%m-%d %H:%M'),
+            log.member.name,
+            log.field_changed.title(),
+            log.before_value or '-',
+            log.after_value or '-',
+            log.edited_by.username
+        ])
+
+    # Table style
+    table_style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7492b9')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ])
+
+    # Create table
+    table = Table(data, colWidths=[70, 80, 70, 60, 60, 60])
+    table.setStyle(table_style)
+    elements.append(table)
+
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="member_edit_log_{tenant.slug}_{date.today().isoformat()}.pdf"'
+    return response

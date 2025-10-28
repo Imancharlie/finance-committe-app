@@ -202,14 +202,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-3 py-4">
+<div class="container-fluid px-3 py-2">
     <!-- Header Section -->
-    <div class="text-center mb-5">
-        <div class="d-inline-flex align-items-center justify-content-center rounded-circle gradient-bg mb-3" style="width: 70px; height: 70px;">
-            <i class="bi bi-file-earmark-excel text-white" style="font-size: 2rem;"></i>
+    <div class="text-center mb-4">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-circle gradient-bg mb-3" style="width: 60px; height: 60px;">
+            <i class="bi bi-file-earmark-excel text-white" style="font-size: 1.5rem;"></i>
         </div>
-        <h1 class="display-6 fw-bold text-dark mb-2">Import Members from Excel</h1>
-        <p class="lead text-muted">Upload your Excel file to import member data quickly and efficiently</p>
+        <h1 class="h4 fw-bold text-dark mb-2">Import Members from Excel</h1>
+        <p class="text-muted mb-0" style="font-size: 0.9rem;">Upload your Excel file to import member data quickly and efficiently</p>
     </div>
 
     <!-- Progress Steps -->
@@ -313,7 +313,7 @@
 
                         <!-- Action Buttons -->
                         <div class="d-flex flex-column flex-md-row gap-3 justify-content-between">
-                            <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary btn-modern">
+                            <a href="{% url 'tracker:dashboard' org_slug=tenant.slug %}" class="btn btn-outline-secondary btn-modern">
                                 <i class="bi bi-arrow-left me-2"></i>Cancel
                             </a>
                             <button type="submit" class="btn btn-primary-modern btn-modern" disabled id="import-btn">
@@ -328,13 +328,13 @@
         <div class="col-lg-4">
             <!-- Format Guide -->
             <div class="card card-modern mb-4">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-theme-primary text-white">
                     <h6 class="card-title mb-0">
                         <i class="bi bi-info-circle me-2"></i>Excel Format Guide
                     </h6>
                 </div>
                 <div class="card-body">
-                    <p class="mb-3 text-muted">Your Excel file should contain these columns:</p>
+                    <p class="mb-3 text-muted">Your Excel file can contain these columns where all are optional except "name":</p>
                     <div class="column-item">
                         <div class="column-badge required">A</div>
                         <div>
@@ -358,20 +358,12 @@
                         <div class="column-badge optional">E</div>
                         <span>Email Address</span>
                     </div>
-                    <div class="column-item">
-                        <div class="column-badge optional">F</div>
-                        <span>Course/Program</span>
-                    </div>
-                    <div class="column-item">
-                        <div class="column-badge optional">G</div>
-                        <span>Year</span>
-                    </div>
                 </div>
             </div>
 
             <!-- Sample Template -->
             <div class="card card-modern mb-4">
-                <div class="card-header bg-success text-white">
+                <div class="card-header bg-theme-secondary text-white">
                     <h6 class="card-title mb-0">
                         <i class="bi bi-download me-2"></i>Sample Template
                     </h6>
@@ -387,7 +379,7 @@
             <!-- Tips -->
             <div class="format-guide">
                 <h6 class="fw-semibold text-dark mb-3">
-                    <i class="bi bi-lightbulb me-2 text-warning"></i>Pro Tips
+                    <i class="bi bi-lightbulb me-2 text-theme"></i>Pro Tips
                 </h6>
                 <ul class="list-unstyled mb-0">
                     <li class="mb-2">
@@ -526,12 +518,12 @@ document.getElementById('import-form').addEventListener('submit', function(e) {
 // Sample template download
 function downloadSampleTemplate() {
     const sampleData = [
-        ['Name', 'Pledge', 'Paid', 'Phone', 'Email', 'Course', 'Year'],
-        ['John Mwambene', 70000, 20000, '0712345678', 'john@example.com', 'Computer Science', '2nd Year'],
-        ['Sarah Kimambo', 80000, 0, '0723456789', 'sarah@example.com', 'Business Administration', '3rd Year'],
-        ['Michael Mwakasege', 90000, 10000, '0734567890', 'michael@example.com', 'Engineering', '1st Year'],
-        ['Grace Mwakatobe', 100000, 30000, '0745678901', 'grace@example.com', 'Medicine', '4th Year'],
-        ['David Mwambene', 70000, 0, '0756789012', 'david@example.com', 'Law', '2nd Year']
+        ['Name', 'Pledge', 'Paid', 'Phone'],
+        ['John Mwambeno', 70000, 20000, '0712345678'],
+        ['Sarah Kimambo', 80000, 0, '0723456789'],
+        ['Michael Mwakasego', 90000, 10000, '0734567890'],
+        ['Grace Mwakatobo', 100000, 30000, '0745678901'],
+        ['David Mwambene', 70000, 0, '0756789012']
     ];
 
     const csvContent = sampleData.map(row => row.join(',')).join('\n');
@@ -547,7 +539,6 @@ function downloadSampleTemplate() {
 
     showNotification('Sample template downloaded! You can open this in Excel and save as .xlsx format.', 'success');
 }
-
 // Notification system
 function showNotification(message, type = 'info') {
     const alertClass = {

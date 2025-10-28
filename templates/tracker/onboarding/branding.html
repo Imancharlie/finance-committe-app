@@ -1,0 +1,93 @@
+{% extends "tracker/onboarding/base.html" %}
+
+{% block title %}Organization Branding - Onboarding{% endblock %}
+
+{% block content %}
+<div class="onboarding-header">
+    <h1><i class="bi bi-palette me-2"></i>Organization Branding & Theme</h1>
+    <p>Customize your organization's appearance and branding</p>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Navbar Title -->
+    <div class="form-group">
+        <label for="navbar_title">Navbar Title</label>
+        <input 
+            type="text" 
+            id="navbar_title" 
+            name="navbar_title" 
+            value="{{ theme.navbar_title }}"
+            placeholder="Your organization name"
+        >
+        <small>This appears in the navigation bar</small>
+    </div>
+
+    <!-- Logo -->
+    <div class="form-group">
+        <label for="logo">Organization Logo</label>
+        <input 
+            type="file" 
+            id="logo" 
+            name="logo" 
+            accept="image/*"
+        >
+        <small>Recommended size: 200x200px (PNG or JPG)</small>
+        {% if theme.logo %}
+            <div style="margin-top: 0.5rem;">
+                <img src="{{ theme.logo.url }}" alt="Current logo" style="max-width: 100px; border-radius: 6px;">
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Watermark Text -->
+    <div class="form-group">
+        <label for="watermark_text">Report Watermark Text</label>
+        <input 
+            type="text" 
+            id="watermark_text" 
+            name="watermark_text" 
+            value="{{ theme.watermark_text }}"
+            placeholder="Bossin"
+        >
+        <small>Text that appears on exported reports</small>
+    </div>
+
+    <!-- Colors -->
+    <div class="form-group">
+        <label>Brand Colors</label>
+        <div class="color-picker-group">
+            <div class="color-input">
+                <input type="color" id="primary_color" name="primary_color" value="{{ theme.primary_color }}">
+                <label for="primary_color">Primary</label>
+            </div>
+            <div class="color-input">
+                <input type="color" id="secondary_color" name="secondary_color" value="{{ theme.secondary_color }}">
+                <label for="secondary_color">Secondary</label>
+            </div>
+            <div class="color-input">
+                <input type="color" id="success_color" name="success_color" value="{{ theme.success_color }}">
+                <label for="success_color">Success</label>
+            </div>
+            <div class="color-input">
+                <input type="color" id="warning_color" name="warning_color" value="{{ theme.warning_color }}">
+                <label for="warning_color">Warning</label>
+            </div>
+            <div class="color-input">
+                <input type="color" id="danger_color" name="danger_color" value="{{ theme.danger_color }}">
+                <label for="danger_color">Danger</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button type="submit" class="btn-action btn-next">
+            <i class="bi bi-arrow-right me-1"></i>Next: Staff
+        </button>
+        <a href="{% url 'tracker:onboarding_staff' org_slug=organization.slug %}" class="btn-action btn-skip">
+            <i class="bi bi-skip-forward me-1"></i>Skip
+        </a>
+    </div>
+</form>
+{% endblock %}

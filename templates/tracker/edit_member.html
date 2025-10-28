@@ -42,8 +42,8 @@
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.phone.id_for_label }}" class="form-label">Phone Number</label>
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label">Phone Number *</label>
                             {{ form.phone }}
                             {% if form.phone.errors %}
                                 <div class="invalid-feedback d-block">
@@ -53,48 +53,10 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
-                            {{ form.email }}
-                            {% if form.email.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.email.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.course.id_for_label }}" class="form-label">Course/Program</label>
-                            {{ form.course }}
-                            {% if form.course.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.course.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.year.id_for_label }}" class="form-label">Year</label>
-                            {{ form.year }}
-                            {% if form.year.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.year.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
                     </div>
                     
                     <div class="d-flex justify-content-between">
-                        <a href="{% url 'tracker:member_detail' member.id %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'tracker:member_detail' member_id=member.id org_slug=tenant.slug %}" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left me-2"></i>Cancel
                         </a>
                         <button type="submit" class="btn btn-primary">

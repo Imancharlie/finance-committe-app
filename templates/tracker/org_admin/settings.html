@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Organization Settings - {{ organization.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f5dc 0%, #faf0e6 50%, #f0e6d2 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    /* Animated background elements */
+    body::before {
+        content: '';
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 20% 50%, rgba(116, 146, 185, 0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(116, 146, 185, 0.05) 0%, transparent 50%);
+        animation: drift 20s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    @keyframes drift {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        50% { transform: translate(50px, 50px) rotate(180deg); }
+    }
+
+    .container-fluid {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Theme color overrides */
+    .bg-theme-primary {
+        background: #7492b9 !important;
+        color: white !important;
+    }
+
+    .bg-theme-secondary {
+        background: #6c757d !important;
+        color: white !important;
+    }
+
+    .btn-theme {
+        background: #7492b9 !important;
+        border-color: #7492b9 !important;
+        color: white !important;
+    }
+
+    .btn-theme:hover {
+        background: #5a7a9e !important;
+        border-color: #5a7a9e !important;
+    }
+
+    /* Mobile-friendly adjustments */
+    @media (max-width: 768px) {
+        h1 { font-size: 1.5rem !important; }
+        h5 { font-size: 1rem !important; }
+        .btn { font-size: 0.8rem !important; padding: 0.4rem 0.8rem !important; }
+        .container-fluid { padding: 1rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-2">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-building"></i> Organization Settings
+            </h1>
+            <p class="text-muted">Edit basic organization information</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Admin
+            </a>
+        </div>
+    </div>
+
+    <!-- Settings Form -->
+    <div class="row">
+        <div class="col-md-8">
+            {% if is_org_viewer %}
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i> <strong>View-Only Access</strong><br>
+                    You have read-only access to this organization. Contact an admin to make changes.
+                </div>
+            {% endif %}
+            <div class="card">
+                <div class="card-header bg-theme-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog"></i> Basic Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if is_org_viewer %}
+                        <!-- Display-only mode for viewers -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <strong>Organization Name</strong>
+                            </label>
+                            <div class="form-control-plaintext">
+                                {{ organization.name }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <strong>Description</strong>
+                            </label>
+                            <div class="form-control-plaintext">
+                                {{ organization.description|default:"No description" }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <strong>Status</strong>
+                            </label>
+                            <div class="form-control-plaintext">
+                                {% if organization.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Admin
+                            </a>
+                        </div>
+                    {% else %}
+                        <!-- Editable form for admins/owners -->
+                        <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Organization Name -->
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                {{ form.name.label }}
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.name.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                The name of your organization (must be unique)
+                            </small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                {{ form.description.label }}
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.description.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                A brief description of your organization
+                            </small>
+                        </div>
+
+                        <!-- Active Status -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {{ form.is_active.label }}
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                Uncheck to deactivate the organization (it won't be accessiible to all)
+                            </small>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                            <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Sidebar -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-theme-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Organization Info
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>Organization ID:</strong><br>
+                        <code>{{ organization.id }}</code>
+                    </p>
+                    <p class="mb-2">
+                        <strong>Organization Slug:</strong><br>
+                        <code>{{ organization.slug }}</code>
+                    </p>
+                    <p class="mb-2">
+                        <strong>Created:</strong><br>
+                        {{ organization.created_at|date:"M d, Y H:i" }}
+                    </p>
+                    <p class="mb-0">
+                        <strong>Last Updated:</strong><br>
+                        {{ organization.updated_at|date:"M d, Y H:i" }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

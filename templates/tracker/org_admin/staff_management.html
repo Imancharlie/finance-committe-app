@@ -1,0 +1,380 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Staff Management - {{ organization.name }}{% endblock %}
+
+{% block extra_css %}<style>
+    html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f5dc 0%, #faf0e6 50%, #f0e6d2 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    /* Animated background elements */
+    body::before {
+        content: '';
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 20% 50%, rgba(116, 146, 185, 0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(116, 146, 185, 0.05) 0%, transparent 50%);
+        animation: drift 20s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    @keyframes drift {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        50% { transform: translate(50px, 50px) rotate(180deg); }
+    }
+
+    .container-fluid {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Theme color overrides */
+    .bg-theme-primary {
+        background: #7492b9 !important;
+        color: white !important;
+    }
+
+    .bg-theme-secondary {
+        background: #6c757d !important;
+        color: white !important;
+    }
+
+    .btn-theme {
+        background: #7492b9 !important;
+        border-color: #7492b9 !important;
+        color: white !important;
+    }
+
+    .btn-theme:hover {
+        background: #5a7a9e !important;
+        border-color: #5a7a9e !important;
+    }
+
+    /* Mobile-friendly compact table */
+    .compact-staff-table {
+        font-size: 0.75rem;
+    }
+    
+    .compact-staff-table th,
+    .compact-staff-table td {
+        padding: 0.4rem 0.3rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .compact-staff-table th {
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: #7492b9;
+        color: white;
+        border: none;
+    }
+    
+    .compact-staff-table .badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+        white-space: nowrap;
+    }
+    
+    .compact-staff-table .btn-sm {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.65rem;
+        margin: 0 0.1rem;
+    }
+    
+    .compact-staff-table .btn-sm i {
+        font-size: 0.6rem;
+    }
+    
+    .compact-staff-table .text-muted {
+        font-size: 0.65rem;
+    }
+
+    /* Responsive table improvements */
+    @media (max-width: 768px) {
+        .compact-staff-table {
+            font-size: 0.7rem;
+        }
+        
+        .compact-staff-table th,
+        .compact-staff-table td {
+            padding: 0.3rem 0.2rem;
+        }
+        
+        .compact-staff-table .btn-sm {
+            padding: 0.15rem 0.3rem;
+            font-size: 0.6rem;
+        }
+        
+        /* Hide less important columns on mobile */
+        .compact-staff-table th:nth-child(6),
+        .compact-staff-table td:nth-child(6),
+        .compact-staff-table th:nth-child(7),
+        .compact-staff-table td:nth-child(7) {
+            display: none;
+        }
+        
+        /* Make table scrollable on mobile */
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .compact-staff-table {
+            font-size: 0.65rem;
+        }
+        
+        .compact-staff-table th,
+        .compact-staff-table td {
+            padding: 0.25rem 0.15rem;
+        }
+        
+        .compact-staff-table .btn-sm {
+            padding: 0.15rem 0.3rem;
+            font-size: 0.7rem;
+            min-width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-width: 1px;
+        }
+        
+        /* Hide less important columns on mobile - keep only #, Username, Role, Actions */
+        .compact-staff-table th:nth-child(3),
+        .compact-staff-table td:nth-child(3),
+        .compact-staff-table th:nth-child(4),
+        .compact-staff-table td:nth-child(4),
+        .compact-staff-table th:nth-child(6),
+        .compact-staff-table td:nth-child(6),
+        .compact-staff-table th:nth-child(7),
+        .compact-staff-table td:nth-child(7) {
+            display: none;
+        }
+        
+        /* Make action buttons more visible on mobile */
+        .compact-staff-table .btn-sm i {
+            font-size: 0.9rem;
+        }
+    }
+
+    /* Mobile-friendly adjustments */
+    @media (max-width: 768px) {
+        h1 { font-size: 1.5rem !important; }
+        h5 { font-size: 1rem !important; }
+        .btn { font-size: 0.8rem !important; padding: 0.4rem 0.8rem !important; }
+        .container-fluid { padding: 1rem; }
+        .row.mb-4 { margin-bottom: 1rem !important; }
+    }
+</style>{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-2">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-users-cog"></i> Staff Management
+            </h1>
+            <p class="text-muted">
+                {% if is_org_viewer %}
+                    <span class="badge bg-info">
+                        <i class="fas fa-eye"></i> View-Only
+                    </span>
+                    View staff members and their roles in {{ organization.name }}
+                {% else %}
+                    Manage staff members and their roles in {{ organization.name }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if can_manage_staff %}
+                <a href="{% url 'tracker:add_staff_member' org_slug=organization.slug %}" class="btn btn-success">
+                    <i class="fas fa-user-plus"></i> Add Staff Member
+                </a>
+            {% endif %}
+            <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Staff Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 compact-staff-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 30px;">#</th>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for org_user in staff_members %}
+                                {% if org_user.role == 'owner' and not is_org_owner %}
+                                    {# Hide owner row from non-owners #}
+                                {% else %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ org_user.user.username }}</strong>
+                                    </td>
+                                    <td>
+                                        {{ org_user.user.first_name }} {{ org_user.user.last_name }}
+                                    </td>
+                                    <td>
+                                        <a href="mailto:{{ org_user.user.email }}">{{ org_user.user.email }}</a>
+                                    </td>
+                                    <td>
+                                        {% if org_user.role == 'owner' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-crown"></i> Owner
+                                            </span>
+                                        {% elif org_user.role == 'admin' %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-shield-alt"></i> Admin
+                                            </span>
+                                        {% elif org_user.role == 'staff' %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-user-tie"></i> Staff
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-eye"></i> Viewer
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if org_user.is_active %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Active
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times"></i> Inactive
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ org_user.joined_at|date:"M d, Y" }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if can_manage_staff %}
+                                            <a href="{% url 'tracker:edit_staff_member' org_slug=organization.slug staff_id=org_user.id %}" 
+                                               class="btn btn-outline-success btn-sm" title="Edit Staff Member" style="margin-right: 0.25rem;">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% if staff_members.count > 1 or org_user.role != 'owner' %}
+                                                <form method="post" 
+                                                      action="{% url 'tracker:remove_staff_member' org_slug=organization.slug staff_id=org_user.id %}"
+                                                      style="display: inline;"
+                                                      onsubmit="return confirm('Are you sure you want to remove {{ org_user.user.username }}?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Remove Staff Member">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted small">
+                                                <i class="fas fa-lock"></i> Read-only
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        <i class="fas fa-users"></i> No staff members yet.
+                                        <a href="{% url 'tracker:add_staff_member' org_slug=organization.slug %}">Add one now</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Descriptions -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-theme-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Role Descriptions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h6 class="text-danger">
+                                <i class="fas fa-crown"></i> Owner
+                            </h6>
+                            <p class="small">
+                                Full access to all organization settings, staff management, and data.
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-warning">
+                                <i class="fas fa-shield-alt"></i> Admin
+                            </h6>
+                            <p class="small">
+                                Can manage staff, view reports, and access organization settings.
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-info">
+                                <i class="fas fa-user-tie"></i> Staff
+                            </h6>
+                            <p class="small">
+                                Can record transactions, manage members, and view organization data.
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-secondary">
+                                <i class="fas fa-eye"></i> Viewer
+                            </h6>
+                            <p class="small">
+                                Read-only access to organization data and reports.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

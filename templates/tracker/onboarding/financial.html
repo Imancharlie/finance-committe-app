@@ -1,0 +1,51 @@
+{% extends "tracker/onboarding/base.html" %}
+
+{% block title %}Financial Settings - Onboarding{% endblock %}
+
+{% block content %}
+<div class="onboarding-header">
+    <h1><i class="bi bi-cash-coin me-2"></i>Financial Settings</h1>
+    <p>Configure default financial targets for your organization</p>
+</div>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <label for="default_pledge_amount">Default Pledge Amount</label>
+        <input 
+            type="number" 
+            id="default_pledge_amount" 
+            name="default_pledge_amount" 
+            value="{{ theme.default_pledge_amount }}"
+            step="0.01"
+            min="0"
+            required
+        >
+        <small>The default contribution amount for new members (e.g., 70000)</small>
+    </div>
+
+    <div class="form-group">
+        <label for="target_amount">Target Collection Amount</label>
+        <input 
+            type="number" 
+            id="target_amount" 
+            name="target_amount" 
+            value="{{ theme.target_amount }}"
+            step="0.01"
+            min="0"
+            required
+        >
+        <small>Your organization's target collection amount (e.g., 210000)</small>
+    </div>
+
+    <div class="button-group">
+        <button type="submit" class="btn-action btn-next">
+            <i class="bi bi-arrow-right me-1"></i>Next: Branding
+        </button>
+        <a href="{% url 'tracker:dashboard' org_slug=organization.slug %}" class="btn-action btn-skip">
+            <i class="bi bi-skip-forward me-1"></i>Skip All
+        </a>
+    </div>
+</form>
+{% endblock %}

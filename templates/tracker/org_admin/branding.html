@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Organization Branding - {{ organization.name }}{% endblock %}
+
+{% block extra_css %}<style>
+    html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f5dc 0%, #faf0e6 50%, #f0e6d2 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    /* Animated background elements */
+    body::before {
+        content: '';
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 20% 50%, rgba(116, 146, 185, 0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(116, 146, 185, 0.05) 0%, transparent 50%);
+        animation: drift 20s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    @keyframes drift {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        50% { transform: translate(50px, 50px) rotate(180deg); }
+    }
+
+    .container-fluid {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Theme color overrides */
+    .bg-theme-primary {
+        background: #7492b9 !important;
+        color: white !important;
+    }
+
+    .bg-theme-secondary {
+        background: #6c757d !important;
+        color: white !important;
+    }
+
+    .btn-theme {
+        background: #7492b9 !important;
+        border-color: #7492b9 !important;
+        color: white !important;
+    }
+
+    .btn-theme:hover {
+        background: #5a7a9e !important;
+        border-color: #5a7a9e !important;
+    }
+
+    /* Mobile-friendly adjustments */
+    @media (max-width: 768px) {
+        h1 { font-size: 1.5rem !important; }
+        h5 { font-size: 1rem !important; }
+        .btn { font-size: 0.8rem !important; padding: 0.4rem 0.8rem !important; }
+        .container-fluid { padding: 1rem; }
+        .row.mb-4 { margin-bottom: 1rem !important; }
+
+        /* Make form columns stack on mobile */
+        .col-md-8 { margin-bottom: 1rem; }
+
+        /* Adjust preview sidebar */
+        .sticky-top { position: static !important; }
+    }
+
+    @media (max-width: 576px) {
+        .col-md-6 { margin-bottom: 1rem; }
+    }
+</style>{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-2">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-palette"></i> Organization Branding & Theme
+            </h1>
+            <p class="text-muted">Customize colors and logo for your organization</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Admin
+            </a>
+        </div>
+    </div>
+
+    <!-- Branding Form -->
+    <div class="row">
+        <div class="col-md-8">
+            {% if is_org_viewer %}
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i> <strong>View-Only Access</strong><br>
+                    You have read-only access to this organization. Contact an admin to make changes.
+                </div>
+            {% endif %}
+            {% if not is_org_viewer %}
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+            {% else %}
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-lock"></i> This page is read-only for your role.
+                </div>
+            {% endif %}
+
+                <!-- Logo Section -->
+                <div class="card mb-4">
+                    <div class="card-header bg-theme-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-image"></i> Logo & Favicon
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Logo -->
+                        <div class="mb-3">
+                            <label for="{{ form.logo.id_for_label }}" class="form-label">
+                                {{ form.logo.label }}
+                            </label>
+                            {% if theme.logo %}
+                                <div class="mb-2">
+                                    <img src="{{ theme.logo.url }}" alt="Organization Logo" style="max-width: 150px; max-height: 150px;">
+                                </div>
+                            {% endif %}
+                            {{ form.logo }}
+                            {% if form.logo.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.logo.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Recommended size: 200x200px. Formats: PNG, JPG, GIF
+                            </small>
+                        </div>
+
+                        <!-- Favicon -->
+                        <div class="mb-3">
+                            <label for="{{ form.favicon.id_for_label }}" class="form-label">
+                                {{ form.favicon.label }}
+                            </label>
+                            {% if theme.favicon %}
+                                <div class="mb-2">
+                                    <img src="{{ theme.favicon.url }}" alt="Favicon" style="max-width: 50px; max-height: 50px;">
+                                </div>
+                            {% endif %}
+                            {{ form.favicon }}
+                            {% if form.favicon.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.favicon.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Recommended size: 32x32px. Formats: PNG, ICO
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+               
+
+                <!-- Text & Watermark Section -->
+                <div class="card mb-4">
+                    
+                    <div class="card-body">
+                        <!-- Navbar Title -->
+                        <div class="mb-3">
+                            <label for="{{ form.navbar_title.id_for_label }}" class="form-label">
+                                {{ form.navbar_title.label }}
+                            </label>
+                            {{ form.navbar_title }}
+                            {% if form.navbar_title.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.navbar_title.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Leave blank to use organization name
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="mb-4">
+                    {% if not is_org_viewer %}
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> Save Branding
+                        </button>
+                    {% endif %}
+                    <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> Back to Admin
+                    </a>
+                </div>
+                {% if not is_org_viewer %}
+                </form>
+                {% endif %}
+        </div>
+
+        <!-- Preview Sidebar -->
+        <div class="col-md-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header bg-theme-secondary text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye"></i> Preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-3">Current Branding:</h6>
+                    
+                    {% if theme.logo %}
+                        <div class="mb-3">
+                            <p class="text-muted small">Logo:</p>
+                            <img src="{{ theme.logo.url }}" alt="Logo" class="img-fluid" style="max-width: 100%;">
+                        </div>
+                    {% endif %}
+
+                    <p class="mb-2">
+                        <strong>Primary Color:</strong><br>
+                        <div style="width: 100%; height: 30px; background-color: {{ theme.primary_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
+                        <code>{{ theme.primary_color }}</code>
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Secondary Color:</strong><br>
+                        <div style="width: 100%; height: 30px; background-color: {{ theme.secondary_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
+                        <code>{{ theme.secondary_color }}</code>
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Success Color:</strong><br>
+                        <div style="width: 100%; height: 30px; background-color: {{ theme.success_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
+                        <code>{{ theme.success_color }}</code>
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Warning Color:</strong><br>
+                        <div style="width: 100%; height: 30px; background-color: {{ theme.warning_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
+                        <code>{{ theme.warning_color }}</code>
+                    </p>
+
+                    <p>
+                        <strong>Danger Color:</strong><br>
+                        <div style="width: 100%; height: 30px; background-color: {{ theme.danger_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
+                        <code>{{ theme.danger_color }}</code>
+                    </p>
+
+                    {% if theme.watermark_text %}
+                        <p class="mt-3">
+                            <strong>Watermark:</strong><br>
+                            <code>{{ theme.watermark_text }}</code>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

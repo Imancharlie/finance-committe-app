@@ -1,0 +1,108 @@
+{% extends "tracker/onboarding/base.html" %}
+
+{% block title %}Staff Management - Onboarding{% endblock %}
+
+{% block content %}
+<div class="onboarding-header">
+    <h1><i class="bi bi-people me-2"></i>Staff Management</h1>
+    <p>Add team members to your organization (optional)</p>
+</div>
+
+<!-- Add Staff Form -->
+<form method="POST" id="staffForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_staff">
+
+    <div class="form-group">
+        <label for="username">Username</label>
+        <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            placeholder="Enter username"
+            required
+        >
+        <small>Unique username for the staff member</small>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Temporary Password</label>
+        <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="Enter temporary password"
+            required
+        >
+        <small>They can change this after login</small>
+    </div>
+
+    <div class="form-group">
+        <label for="role">Role</label>
+        <select id="role" name="role" required>
+            <option value="staff">Staff (Can record transactions)</option>
+            <option value="admin">Admin (Can manage staff)</option>
+            <option value="viewer">Viewer (Read-only access)</option>
+        </select>
+        <small>Choose the access level for this user</small>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-sm" style="background: #7492b9; border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 1rem;">
+        <i class="bi bi-plus-circle me-1"></i>Add Staff Member
+    </button>
+</form>
+
+<!-- Current Staff List -->
+{% if staff_members %}
+    <div class="staff-list">
+        <h5 style="color: #7492b9; margin-bottom: 1rem; margin-top: 2rem;">
+            <i class="bi bi-check-circle me-1"></i>Team Members ({{ staff_members.count }})
+        </h5>
+        {% for org_user in staff_members %}
+            <div class="staff-item">
+                <div class="staff-info">
+                    <div class="staff-username">{{ org_user.user.username }}</div>
+                    <div class="staff-role">{{ org_user.get_role_display }}</div>
+                </div>
+                <span class="staff-badge">{{ org_user.get_role_display }}</span>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div style="background: #f8f9fa; border: 1px dashed #ddd; border-radius: 6px; padding: 2rem; text-align: center; margin-top: 2rem; color: #999;">
+        <i class="bi bi-people" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+        <p>No staff members added yet</p>
+    </div>
+{% endif %}
+
+<div class="button-group" style="margin-top: 2rem;">
+    <form method="POST" style="flex: 1;">
+        {% csrf_token %}
+        <button type="submit" class="btn-action btn-next" style="width: 100%;">
+            <i class="bi bi-arrow-right me-1"></i>Next: Import
+        </button>
+    </form>
+    <a href="{% url 'tracker:onboarding_import' org_slug=organization.slug %}" class="btn-action btn-skip">
+        <i class="bi bi-skip-forward me-1"></i>Skip
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('staffForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        
+        if (!username || !password) {
+            alert('Please fill in all fields');
+            return;
+        }
+        
+        // Submit the form
+        this.submit();
+    });
+</script>
+{% endblock %}

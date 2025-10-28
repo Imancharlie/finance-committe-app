@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block title %}Daily Collection - Mission Offering Tracker{% endblock %}
 
@@ -25,7 +26,7 @@
     }
     
     .compact-stats .bi {
-        font-size: 1.2rem;
+        font-size: 1.5rem;
     }
     
     /* Ultra-compact table */
@@ -49,8 +50,10 @@
     }
     
     .compact-table .amount-display {
-        font-size: 0.65rem;
+        font-size: 0.7rem;
         white-space: nowrap;
+        font-weight: 600;
+        color: #212529;
     }
     
     .compact-table .status-badge {
@@ -79,7 +82,7 @@
     .payment-input:focus {
         background-color: #fff;
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+        box-shadow: 0 0 0 0.2rem rgba(116, 146, 185, 0.25);
     }
     
     /* Success message */
@@ -88,7 +91,7 @@
         top: 20px;
         right: 20px;
         z-index: 9999;
-        background: linear-gradient(135deg, #059669, #047857);
+        background: var(--success-color);
         color: white;
         padding: 0.75rem 1.5rem;
         border-radius: 8px;
@@ -106,18 +109,65 @@
         transform: translateX(100%);
     }
     
+  
     /* Compact search form */
     .compact-search .form-control,
     .compact-search .form-select {
         font-size: 0.75rem;
         padding: 0.3rem 0.5rem;
     }
-    
+
     .compact-search .btn {
         font-size: 0.75rem;
         padding: 0.3rem 0.5rem;
     }
-    
+
+    /* Status indicators */
+    .status-complete {
+        color: #28a745;
+        font-weight: 600;
+    }
+
+    .status-incomplete {
+        color: #ffc107;
+        font-weight: 600;
+    }
+
+    .status-not-started {
+        color: #dc3545;
+        font-weight: 600;
+    }
+
+    .status-exceeded {
+        color: #17a2b8;
+        font-weight: 600;
+    }
+
+    /* Smart filters */
+    .smart-filters {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.5rem;
+    }
+
+    .filter-badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-badge.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .compact-stats .card-title {
@@ -204,7 +254,7 @@
         font-size: 0.65rem;
         font-weight: 600;
         padding: 0.4rem 0.2rem;
-        background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+        background: var(--primary-color);
         color: white;
         border: none;
     }
@@ -233,6 +283,158 @@
         font-size: 0.7rem;
         padding: 0.3rem 0.6rem;
     }
+
+    /* Status indicators */
+    .status-complete {
+        color: #28a745;
+        font-weight: 600;
+    }
+
+    .status-incomplete {
+        color: #ffc107;
+        font-weight: 600;
+    }
+
+    .status-not-started {
+        color: #dc3545;
+        font-weight: 600;
+    }
+
+    .status-exceeded {
+        color: #17a2b8;
+        font-weight: 600;
+    }
+
+    /* Smart filters */
+    .smart-filters {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.5rem;
+    }
+
+    .filter-badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-badge.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    /* Compact search form styling */
+    .compact-search {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.75rem;
+    }
+
+    .compact-search .form-control,
+    .compact-search .form-select {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+        border-radius: 4px;
+    }
+
+    .compact-search .input-group-text {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+        background-color: white;
+        border-color: #dee2e6;
+    }
+
+    .compact-search .btn {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.8rem;
+    }
+
+    /* Table improvements */
+    .compact-table .save-btn {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.6rem;
+    }
+
+    .compact-table .save-btn i {
+        margin-right: 0.2rem;
+    }
+
+    /* Amount display styling */
+    .amount-display {
+        font-family: 'Courier New', monospace;
+        font-weight: 500;
+    }
+
+    /* Member name link */
+    .member-name-link {
+        color: #007bff;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .member-name-link:hover {
+        text-decoration: underline;
+        color: #0056b3;
+    }
+
+    /* Payment input styling */
+    .payment-input {
+        background-color: #f0f8ff;
+        border-color: #007bff;
+        font-weight: 600;
+        color: #0056b3;
+    }
+
+    .payment-input:focus {
+        background-color: #fff;
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .payment-input.changed {
+        background-color: #d4edda;
+        border-color: #28a745;
+    }
+
+    /* Row changed indicator */
+    .row-changed {
+        background-color: #fff3cd;
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        color: #ffc107;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state a {
+        color: #007bff;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .empty-state a:hover {
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
@@ -244,46 +446,51 @@
         <p class="text-muted mb-0">Record today's payments - {{ today|date:"F d, Y" }}</p>
     </div>
     <div class="btn-group">
-        <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-primary btn-sm">
+        <a href="{% url 'tracker:dashboard' org_slug=tenant.slug %}" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-house me-1"></i>Dashboard
         </a>
-        <a href="{% url 'tracker:admin_log' %}" class="btn btn-outline-secondary btn-sm">
+        <a href="{% url 'tracker:admin_log' org_slug=tenant.slug %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-journal-text me-1"></i>Log
         </a>
     </div>
 </div>
 
-<!-- Compact Search and Filters -->
+<!-- Compact Search and Advanced Filters -->
 <div class="card mb-2">
     <div class="card-body py-1 compact-search">
-        <form method="get" class="row g-1 align-items-end">
-            <div class="col-md-5">
+        <div class="row g-1 align-items-end">
+            <div class="col-md-4">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" name="search" 
-                           value="{{ search_query }}" placeholder="Search members...">
+                    <input type="text" class="form-control" id="searchMembers"
+                           placeholder="Search members..." value="{{ search_query }}">
                 </div>
             </div>
-            
+
             <div class="col-md-3">
-                <select class="form-select form-select-sm" name="filter">
-                    <option value="">All Members</option>
-                    <option value="incomplete" {% if filter_status == 'incomplete' %}selected{% endif %}>Incomplete</option>
-                    <option value="complete" {% if filter_status == 'complete' %}selected{% endif %}>Complete</option>
-                    <option value="pledged" {% if filter_status == 'pledged' %}selected{% endif %}>Pledged</option>
-                    <option value="not_started" {% if filter_status == 'not_started' %}selected{% endif %}>Not Started</option>
-                    <option value="exceeded" {% if filter_status == 'exceeded' %}selected{% endif %}>Exceeded</option>
+                <select class="form-select form-select-sm" id="statusFilter">
+                    <option value="all">All Status</option>
+                    <option value="complete">Complete</option>
+                    <option value="incomplete">Incomplete</option>
+                    <option value="not_started">Not Started</option>
+                    <option value="exceeded">Exceeded</option>
                 </select>
             </div>
-            
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+
+            <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">Below</span>
+                    <input type="number" class="form-control" id="amountFilter"
+                           placeholder="Amount" min="0" step="1000">
+                </div>
             </div>
-            
+
             <div class="col-md-2">
-                <a href="{% url 'tracker:daily_collection' %}" class="btn btn-outline-secondary btn-sm w-100">Clear</a>
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="clearFilters">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                </button>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -313,18 +520,18 @@
                         <tr data-member-id="{{ member.id }}">
                             <td>{{ forloop.counter }}</td>
                             <td>
-                                <a href="{% url 'tracker:member_detail' member.id %}" class="member-name-link" title="{{ member.name }}">
+                                <a href="{% url 'tracker:member_detail' member_id=member.id org_slug=tenant.slug %}" class="member-name-link" title="{{ member.name }}">
                                     {{ member.name }}
                                 </a>
                             </td>
                             <td>
                                 <span class="amount-display">
-                                    {{ member.paid_total|floatformat:0 }}
+                                    {{ member.paid_total|intcomma }}
                                 </span>
                             </td>
                             <td class="remaining-display">
                                 <span class="amount-display {% if member.remaining < 0 %}text-success{% elif member.remaining > 0 %}text-warning{% endif %}">
-                                    {{ member.remaining|floatformat:0 }}
+                                    {{ member.remaining|intcomma }}
                                 </span>
                             </td>
                             <td>
@@ -455,18 +662,18 @@ $(document).ready(function() {
             showSuccessMessage('Please enter a valid payment amount');
             return;
         }
-        
         // Show loading state
         $btn.prop('disabled', true);
         $btn.html('<i class="bi bi-hourglass-split"></i>');
         
         $.ajax({
-            url: '{% url "tracker:record_daily_payment_ajax" %}',
+            url: '{% url "tracker:record_daily_payment_ajax" org_slug=tenant.slug %}',
             method: 'POST',
             data: JSON.stringify({
                 member_id: memberId,
                 payment_amount: paymentAmount,
-                note: 'Daily collection payment'
+                note: 'Daily collection payment',
+                org_slug: '{{ tenant.slug }}'
             }),
             contentType: 'application/json',
             success: function(response) {

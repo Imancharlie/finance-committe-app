@@ -1,6 +1,4 @@
-{% extends 'base.html' %}
-
-{% block title %}Dashboard - Mission Offering Tracker{% endblock %}
+{% extends 'base.html' %}\n{% load custom_filters %}\n\n{% block title %}Dashboard - Mission Offering Tracker{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -20,7 +18,7 @@
     flex: 1; /* Equal width distribution */
     min-width: 100px; /* Minimum readable size */
     max-width: none; /* Remove max-width restriction */
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    background: #f8f9fa;
     border-radius: 8px;
     padding: 0.75rem;
     border: 1px solid #dee2e6;
@@ -86,7 +84,7 @@
 
 .progress-mini .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #ffc107, #fd7e14);
+    background: #ffc107;
     border-radius: 2px;
     transition: width 0.3s ease;
 }
@@ -112,8 +110,8 @@
 }
 
 .search-trigger:hover {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(116, 146, 185, 0.25);
 }
 
 .search-trigger i {
@@ -198,7 +196,7 @@
     font-size: 0.7rem;
     font-weight: 600;
     padding: 0.5rem 0.3rem;
-    background: linear-gradient(135deg, #007bff, #0056b3);
+    background: var(--primary-color);
     color: white;
     border: none;
     text-align: center;
@@ -334,12 +332,24 @@
     <div>
         <h1 class="mb-1">Mission Dashboard</h1>
         <p class="mb-0">Track contributions for Mlali Village mission</p>
-    </div>{% if can_edit %}
+    </div>
     <div class="btn-group">
-        <a class="btn btn-primary btn-sm" href="{% url 'tracker:daily_collection' %}">
-            <i class="bi bi-cash-coin me-1"></i>Daily Collection
-        </a>
-    </div>{% endif %}
+        {% if is_org_admin %}
+            <!-- Mobile: Show Admin button only -->
+            <a class="btn btn-warning btn-sm d-md-none" href="{% url 'tracker:org_admin_dashboard' org_slug=tenant.slug %}">
+                <i class="bi bi-gear me-1"></i>Admin
+            </a>
+            <!-- Desktop: Show both buttons -->
+            <a class="btn btn-warning btn-sm d-none d-md-inline-block" href="{% url 'tracker:org_admin_dashboard' org_slug=tenant.slug %}">
+                <i class="bi bi-gear me-1"></i>Admin
+            </a>
+        {% endif %}
+        {% if can_edit %}
+            <a class="btn btn-primary btn-sm" href="{% url 'tracker:daily_collection' org_slug=tenant.slug %}">
+                <i class="bi bi-cash-coin me-1"></i>Daily Collection
+            </a>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Horizontal Statistics Cards -->
@@ -347,7 +357,7 @@
     <div class="stat-card total-card">
         <div class="stat-content">
             <div class="stat-label">Total Collected</div>
-            <div class="stat-value">TZS {{ total_collected|floatformat:0|default:"0" }}</div>
+            <div class="stat-value">TZS {{ total_collected|intcomma }}</div>
         </div>
         <i class="bi bi-cash-stack stat-icon"></i>
     </div>
@@ -373,11 +383,11 @@
 </div>
 <div class="mb-4">
     <div class="btn-group" role="group" aria-label="Export options">
-        <a href="{% url 'tracker:export_excel' %}?search={{ search_query }}&filter={{ filter_status }}"
+        <a href="{% url 'tracker:export_excel' org_slug=tenant.slug %}?search={{ search_query }}&filter={{ filter_status }}"
            class="btn btn-outline-success">
             <i class="fas fa-file-excel me-1"></i> Excel
         </a>
-        <a href="{% url 'tracker:export_pdf' %}?search={{ search_query }}&filter={{ filter_status }}"
+        <a href="{% url 'tracker:export_pdf' org_slug=tenant.slug %}?search={{ search_query }}&filter={{ filter_status }}"
            class="btn btn-outline-danger">
             <i class="fas fa-file-pdf me-1"></i> PDF
         </a>
@@ -420,7 +430,7 @@
             </div>
 
             <div class="col-md-2">
-                <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary w-100">
+                <a href="{% url 'tracker:dashboard' org_slug=tenant.slug %}" class="btn btn-outline-secondary w-100">
                     <i class="bi bi-x-lg me-1"></i>Clear
                 </a>
             </div>
@@ -454,17 +464,17 @@
                         <tr data-member-id="{{ member.id }}">
                             <td class="text-center">{{ forloop.counter }}</td>
                             <td>
-                                <a href="{% url 'tracker:member_detail' member.id %}" class="member-name-link" title="{{ member.name }}">
+                                <a href="{% url 'tracker:member_detail' member_id=member.id org_slug=tenant.slug %}" class="member-name-link" title="{{ member.name }}">
                                     {{ member.name }}
                                 </a>
                             </td>
                             <td class="text-center fw-bold text-success">
-                                {{ member.paid_total|floatformat:0 }}
+                                {{ member.paid_total|intcomma }}
                             </td>
 
                             <td class="remaining-display text-center">
                                 <span class="amount-display {% if member.remaining < 0 %}text-success fw-bold{% elif member.remaining > 0 %}text-warning{% endif %}">
-                                    {{ member.remaining|floatformat:0 }}
+                                    {{ member.remaining|intcomma }}
                                 </span>
                             </td>
                             <td class="text-center">
@@ -653,7 +663,7 @@ $(document).ready(function() {
         $spinner.show();
 
         $.ajax({
-            url: '{% url "tracker:add_member_ajax" %}',
+            url: '{% url "tracker:add_member_ajax" org_slug=tenant.slug %}',
             method: 'POST',
             data: JSON.stringify({
                 name: name,
@@ -686,7 +696,7 @@ $(document).ready(function() {
         $saveBtn.html('<i class="bi bi-hourglass-split"></i>');
 
         $.ajax({
-            url: '{% url "tracker:update_member_ajax" %}',
+            url: '{% url "tracker:update_member_ajax" org_slug=tenant.slug %}',
             method: 'POST',
             data: JSON.stringify({
                 member_id: memberId,

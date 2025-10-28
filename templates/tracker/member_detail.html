@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block title %}{{ member.name }} - Member Details{% endblock %}
 
@@ -53,7 +54,7 @@
         font-size: 0.7rem;
         font-weight: 600;
         padding: 0.5rem 0.3rem;
-        background: linear-gradient(135deg, #007bff, #0056b3);
+        background: var(--primary-color);
         color: white;
         border: none;
         text-align: center;
@@ -108,7 +109,7 @@
 
     .transaction-row.editing {
         background-color: #f8f9fa;
-        border-left: 3px solid #007bff;
+        border-left: 3px solid var(--primary-color);
     }
 
     .transaction-row.success-flash {
@@ -149,7 +150,7 @@
     }
 
     .modal-header {
-        background: linear-gradient(135deg, #007bff, #0056b3);
+        background: var(--primary-color);
         color: white;
     }
 
@@ -225,10 +226,12 @@
         <p class="mb-0">Member Details & Transaction History</p>
     </div>
     <div class="btn-group">
-        <a href="{% url 'tracker:edit_member' member.id %}" class="btn btn-outline-primary">
+        {% if can_edit_members %}
+        <a href="{% url 'tracker:edit_member' member_id=member.id org_slug=tenant.slug %}" class="btn btn-outline-primary">
             <i class="bi bi-pencil me-1"></i>Edit
         </a>
-        <a href="{% url 'tracker:dashboard' %}" class="btn btn-outline-secondary">
+        {% endif %}
+        <a href="{% url 'tracker:dashboard' org_slug=tenant.slug %}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i>Back
         </a>
     </div>
@@ -253,7 +256,9 @@
                 <div class="mb-3">
                     <label class="form-label text-muted">Phone</label>
                     <p class="mb-0">
-                        <i class="bi bi-telephone me-2"></i>{{ member.phone }}
+                        <a href="tel:{{ member.phone }}" style="text-decoration: none; color: inherit;">
+                            <i class="bi bi-telephone me-2"></i>{{ member.phone }}
+                        </a>
                     </p>
                 </div>
                 {% endif %}
@@ -302,25 +307,30 @@
                     <div class="col-md-4 mb-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-1" style="font-size: 0.75rem;">Total Pledge</h6>
-                            <h4 class="amount-display">TZS {{ member.pledge|floatformat:0 }}</h4>
+                            <h4 class="amount-display">TZS {{ member.pledge|intcomma }}</h4>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-1" style="font-size: 0.75rem;">Paid So Far</h6>
-                            <h4 class="amount-display text-success">TZS {{ member.paid_total|floatformat:0 }}</h4>
+                            <h4 class="amount-display text-success">TZS {{ member.paid_total|intcomma }}</h4>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div class="text-center">
+                            {% if member.has_exceeded %}
+                            <h6 class="text-muted mb-1" style="font-size: 0.75rem;">Exceed By</h6>
+                            <h4 class="amount-display text-success">TZS {{ member.remaining|abs_value|intcomma }}</h4>
+                            {% else %}
                             <h6 class="text-muted mb-1" style="font-size: 0.75rem;">Remaining</h6>
-                            <h4 class="amount-display text-warning">TZS {{ member.remaining|floatformat:0 }}</h4>
+                            <h4 class="amount-display text-warning">TZS {{ member.remaining|intcomma }}</h4>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
 
                 <div class="progress mb-3" style="height: 8px;">
-                    <div class="progress-bar" style="width: {% widthratio member.paid_total member.pledge 100 %}%"></div>
+                    <div class="progress-bar" style="width: {% widthratio member.paid_total member.pledge 100 %}%; max-width: 100%;"></div>
                 </div>
 
                 <div class="text-center">
@@ -363,7 +373,7 @@
                             <span class="transaction-date">{{ transaction.date|date:"M d, Y" }}</span>
                         </td>
                         <td>
-                            <span class="transaction-amount amount-display">TZS {{ transaction.amount|floatformat:0 }}</span>
+                            <span class="transaction-amount amount-display">TZS {{ transaction.amount|intcomma }}</span>
                         </td>
                         <td>{{ transaction.added_by.username }}</td>
                         <td>
@@ -651,7 +661,7 @@ $(document).ready(function() {
 
         // Send AJAX request to update transaction
         $.ajax({
-            url: '{% url "tracker:update_transaction_ajax" %}',
+            url: '{% url "tracker:update_transaction_ajax" org_slug=tenant.slug %}',
             method: 'POST',
             data: JSON.stringify({
                 transaction_id: currentTransactionId,
@@ -707,7 +717,7 @@ $(document).ready(function() {
 
             // Send AJAX request to delete transaction
             $.ajax({
-                url: '{% url "tracker:delete_transaction_ajax" %}',
+                url: '{% url "tracker:delete_transaction_ajax" org_slug=tenant.slug %}',
                 method: 'POST',
                 data: JSON.stringify({
                     transaction_id: transactionId
@@ -812,5 +822,5 @@ $(document).ready(function() {
     setTimeout(() => {
         $('.alert').alert('close');
     }, 5000);
-});</script>//
+});</script>
 {% endblock extra_js %}
