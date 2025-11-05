@@ -12,12 +12,30 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Use PyMySQL as MySQL driver (pure Python, no C++ required)
 import pymysql
 pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# Load Firebase credentials from separate JSON file
+import json
+FIREBASE_CREDENTIALS_PATH = BASE_DIR / 'firebase-credentials.json'
+if FIREBASE_CREDENTIALS_PATH.exists():
+    with open(FIREBASE_CREDENTIALS_PATH, 'r') as f:
+        FIREBASE_CREDENTIALS = json.load(f)
+        FIREBASE_SERVICE_ACCOUNT_KEY = json.dumps(FIREBASE_CREDENTIALS)
+        FIREBASE_PROJECT_ID = FIREBASE_CREDENTIALS.get('project_id', 'bossin-1fabd')
+else:
+    FIREBASE_CREDENTIALS = None
+    FIREBASE_SERVICE_ACCOUNT_KEY = os.getenv('FIREBASE_SERVICE_ACCOUNT_KEY', '')
+    FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID', 'bossin-1fabd')
 
 
 # Quick-start development settings - unsuitable for production
@@ -39,9 +57,15 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.humanize",  # For intcomma and other human-readable filters
     "django.contrib.staticfiles",
+    "django.contrib.sites",  # Required by django-allauth
+    "allauth",  # Django allauth
+    "allauth.account",  # Django allauth account
+    "allauth.socialaccount",  # Django allauth social account
+    "allauth.socialaccount.providers.google",  # Google OAuth2 provider
     "tracker",
-    # "pwa",  # Temporarily disabled due to Django 5.2 compatibility
+    "pwa",  # Progressive Web App support
 ]
 
 MIDDLEWARE = [
@@ -52,7 +76,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",  # Required by django-allauth
     "tracker.middleware.TenantMiddleware",  # Multi-tenant support
+    "tracker.middleware.StaffOnboardingMiddleware",  # Staff onboarding redirect
+    "tracker.middleware.SubscriptionEnforcementMiddleware",  # Enforce subscription after trial
 ]
 
 ROOT_URLCONF = "mission_tracker.urls"
@@ -68,6 +95,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "tracker.context_processors.theme_context",  # Multi-tenant theming
+                "tracker.context_processors_bossin.bossin_admin_context",  # Bossin Admin Portal
             ],
         },
     },
@@ -167,54 +195,40 @@ HANDLER404 = 'tracker.views.custom_404'
 HANDLER500 = 'tracker.views.custom_500'
 
 
+# Session Configuration - 10 minute timeout for security
+SESSION_COOKIE_AGE = 600  # 10 minutes in seconds
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Session expires when browser closes
+SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request to track activity
+
+
 # your_project/settings.py
 
 PWA_APP_NAME = 'BossIn'
 PWA_APP_DESCRIPTION = "A Mission Finance tracker."
-PWA_APP_THEME_COLOR = '#4285F4' # Replace with your app's primary blue
+PWA_APP_THEME_COLOR = '#7492b9' # Default organization theme color
 PWA_APP_BACKGROUND_COLOR = '#FFFFFF'
 PWA_APP_DISPLAY = 'standalone' # Makes it feel more like a native app
 PWA_APP_SCOPE = '/' # Defines the scope of your PWA
 PWA_APP_ORIENTATION = 'any'
-PWA_APP_START_URL = '/'
+PWA_APP_START_URL = '/login/'
 PWA_APP_STATUS_BAR_COLOR = 'default' # For iOS status bar
 PWA_APP_ICONS = [
     {
-        'src': '/static/images/icons/icon-72x72.png',
-        'sizes': '72x72'
-    },
-    {
-        'src': '/static/images/icons/icon-96x96.png',
-        'sizes': '96x96'
-    },
-    {
-        'src': '/static/images/icons/icon-128x128.png',
+        'src': '/static/icons/icon-128x128.png',
         'sizes': '128x128'
     },
     {
-        'src': '/static/images/icons/icon-144x144.png',
+        'src': '/static/icons/icon-144x144.png',
         'sizes': '144x144'
     },
     {
-        'src': '/static/images/icons/icon-152x152.png',
+        'src': '/static/icons/icon-152x152.png',
         'sizes': '152x152'
-    },
-    {
-        'src': '/static/images/icons/icon-192x192.png',
-        'sizes': '192x192'
-    },
-    {
-        'src': '/static/images/icons/icon-384x384.png',
-        'sizes': '384x384'
-    },
-    {
-        'src': '/static/images/icons/icon-512x512.png',
-        'sizes': '512x512'
     },
 ]
 PWA_APP_ICONS_APPLE = [
     {
-        'src': '/static/images/icons/apple-touch-icon.png',
+        'src': '/static/icons/apple-touch-icon (2).png',
         'sizes': '180x180'
     }
 ]
@@ -304,3 +318,46 @@ LOGGING = {
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
 if not os.path.exists(LOGS_DIR):
     os.makedirs(LOGS_DIR)
+
+
+# ============================================================================
+# DJANGO ALLAUTH CONFIGURATION
+# ============================================================================
+
+# Site ID for django-allauth
+SITE_ID = 1
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Account settings
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Skip email verification for simplicity
+ACCOUNT_SIGNUP_REDIRECT_URL = '/onboarding/financial/'
+ACCOUNT_LOGIN_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'
+
+# Social account settings
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_ADAPTER = 'tracker.adapters.CustomSocialAccountAdapter'
+
+# Google OAuth2 settings (will be configured in production)
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),  # Will be set in environment
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET', ''),  # Will be set in environment
+        }
+    }
+}
+
+# Firebase Project ID (extracted from Firebase App ID)
+# FIREBASE_PROJECT_ID is now loaded from firebase-credentials.json

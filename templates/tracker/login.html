@@ -6,6 +6,7 @@
     <title>Login - Bossin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    {% load socialaccount %}  <!-- Load Django Allauth template tags -->
     <style>
         * {
             margin: 0;
@@ -265,6 +266,31 @@
             box-shadow: 0 5px 15px rgba(116, 146, 185, 0.3);
         }
 
+        .btn-google-login {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            color: #3c4043;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-google-login:hover {
+            background: #f8f9fa;
+            border-color: #c4c7c5;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+            color: #202124;
+        }
+
         .login-links {
             text-align: center;
             margin-top: 1.5rem;
@@ -510,6 +536,16 @@
                     Sign In
                 </button>
             </form>
+
+            <!-- Social Login Divider -->
+            <div style="text-align: center; margin: 1.5rem 0; position: relative;">
+                <hr style="border: 0; height: 1px; background: #ddd; margin: 0;">
+                <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: white; padding: 0 1rem; color: #666; font-size: 0.85rem; font-weight: 500;">
+                    or 
+                </span>
+            </div>
+
+            
 
             <!-- Login Links -->
             <div class="login-links">

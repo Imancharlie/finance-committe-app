@@ -382,21 +382,7 @@
                             </span>
                         </td>{% if can_edit %}
                         <td>
-                            <div class="edit-controls">
-                                <button type="button" class="btn btn-sm btn-outline-primary edit-transaction-btn"
-                                        data-transaction-id="{{ transaction.id }}"
-                                        data-amount="{{ transaction.amount }}"
-                                        data-note="{{ transaction.note|default:'' }}"
-                                        title="Edit Transaction">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger delete-transaction-btn"
-                                        data-transaction-id="{{ transaction.id }}"
-                                        title="Delete Transaction">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </td>{% endif %}
+                                                   </td>{% endif %}
                     </tr>
                     {% empty %}
                     <tr>
@@ -414,7 +400,7 @@
         </div>
     </div>
 </div>
-{% if can_edit %}
+{% if can_add_payment %}
 <!-- Add New Payment -->
 <div class="card compact-card">
     <div class="card-header">
@@ -581,7 +567,25 @@ $(document).ready(function() {
 
         // Show loading state
         $('#submitBtn').prop('disabled', true).html('<i class="bi bi-hourglass-split me-2"></i>Recording...');
+        
+        // Form will be cleared on successful redirect (server-side)
     });
+    
+    // Clear form after successful submission
+    // Check if we just submitted successfully (on page load after redirect)
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success' and 'Payment' in message %}
+                // Clear form if payment was successful (after redirect)
+                $(document).ready(function() {
+                    $('#paymentForm')[0].reset();
+                    // Also clear any validation states
+                    $('#paymentForm .form-control').removeClass('is-invalid');
+                    $('#paymentForm .invalid-feedback').hide();
+                });
+            {% endif %}
+        {% endfor %}
+    {% endif %}
 
     // Real-time amount validation for new payments
     $('#{{ transaction_form.amount.id_for_label }}').on('input', function() {

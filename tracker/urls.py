@@ -23,6 +23,8 @@ tenant_urlpatterns = [
     path('export/excel/', views.export_excel, name='export_excel'),
     path('export/pdf/', views.export_pdf, name='export_pdf'),
     path('offline/', views.offline_view, name='offline'),
+    path('help/', views.help_center, name='help_center'),
+    path('help/', views.help_center, name='help_center'),
     
     # Member editing URLs
     path('members/edit/', views.edit_members, name='edit_members'),
@@ -40,6 +42,7 @@ tenant_urlpatterns = [
     path('admin/', views.org_admin_dashboard, name='org_admin_dashboard'),
     path('admin/settings/', views.org_settings, name='org_settings'),
     path('admin/branding/', views.org_branding, name='org_branding'),
+    path('admin/billing/', views.org_billing, name='org_billing'),
     path('admin/financial-settings/', views.org_financial_settings, name='org_financial_settings'),
     path('admin/staff/', views.org_staff_management, name='org_staff_management'),
     path('admin/staff/add/', views.add_staff_member, name='add_staff_member'),
@@ -51,12 +54,18 @@ tenant_urlpatterns = [
     path('onboarding/branding/', views.onboarding_branding, name='onboarding_branding'),
     path('onboarding/staff/', views.onboarding_staff, name='onboarding_staff'),
     path('onboarding/import/', views.onboarding_import, name='onboarding_import'),
+    path('onboarding/subscription/', views.onboarding_subscription, name='onboarding_subscription'),
+    path('staff/onboarding/', views.staff_onboarding, name='staff_onboarding'),
+    
+    # Subscription renewal page (for expired subscriptions)
+    path('subscription/', views.subscription_renewal, name='subscription_renewal'),
 ]
 
 # Global URLs (not tenant-specific)
 urlpatterns = [
     # Public pages (MUST be before org_slug pattern)
     path('', views.landing_view, name='landing'),
+    path('terms/', views.terms_view, name='terms'),
     path('signup/', views.signup_view, name='signup'),
     path('login/', views.login_view, name='login'),
     

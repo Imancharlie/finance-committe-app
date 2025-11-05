@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - Bossin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    {% load static %}
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/bootstrap-icons.css' %}">
+    <!-- Fallback CDN for Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
     <style>
         * {
             margin: 0;
@@ -319,7 +323,9 @@
             font-size: 0.85rem;
         }
 
-        .form-group input,
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="password"],
         .form-group textarea {
             width: 100%;
             border: 1px solid #ddd;
@@ -329,6 +335,13 @@
             transition: all 0.2s ease;
             font-family: inherit;
             display: block;
+        }
+
+        /* Ensure checkboxes are small square boxes */
+        .form-check-input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            margin-top: 0.2rem;
         }
 
         .form-group input:focus,
@@ -408,6 +421,31 @@
             background: #218838;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-google-signup {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            color: #3c4043;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-google-signup:hover {
+            background: #f8f9fa;
+            border-color: #c4c7c5;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+            color: #202124;
         }
 
         .login-link {
@@ -648,6 +686,8 @@
             {% endfor %}
         {% endif %}
 
+        
+
         <!-- Signup Form -->
         <form method="POST" id="signupForm" novalidate>
             {% csrf_token %}
@@ -748,6 +788,18 @@
                     {% endif %}
                 </div>
 
+                <!-- Terms & Conditions -->
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="accept_terms" id="accept_terms" required>
+                        <label class="form-check-label" for="accept_terms">
+                            I agree to the 
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms & Conditions</a>
+                        </label>
+                    </div>
+                    <small>Required to create an account</small>
+                </div>
+
                 <!-- Non-field errors -->
                 {% if form.non_field_errors %}
                     <div class="alert alert-danger">
@@ -774,6 +826,43 @@
         </div>
     </div>
 </div>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-shield-check me-2"></i>Terms & Conditions</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h6>Use of Service</h6>
+        <ul>
+          <li>You are responsible for maintaining the security of your account.</li>
+          <li>You must not misuse or attempt to disrupt the service.</li>
+        </ul>
+        <h6>Data & Privacy</h6>
+        <ul>
+          <li>Your data is processed solely to provide the service.</li>
+          <li>Each organization’s data is isolated; only authorized users can access it.</li>
+        </ul>
+        <h6>Backups</h6>
+        <ul>
+          <li>Backups are performed according to platform configuration; export critical data as needed.</li>
+        </ul>
+        <h6>Termination</h6>
+        <ul>
+          <li>We may suspend or terminate accounts violating these terms.</li>
+        </ul>
+        <p class="mb-0">Questions? <a href="mailto:KodinSoftwares@gmail.com">KodinSoftwares@gmail.com</a></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
+      </div>
+    </div>
+  </div>
+  </div>
 
 <script>
     function nextStep() {

@@ -85,13 +85,13 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1 class="mb-2">
-                <i class="fas fa-building"></i> Organization Settings
+                <i class="bi bi-building"></i> Organization Settings
             </h1>
             <p class="text-muted">Edit basic organization information</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Admin
+                <i class="bi bi-arrow-left"></i> Back to Admin
             </a>
         </div>
     </div>
@@ -101,14 +101,14 @@
         <div class="col-md-8">
             {% if is_org_viewer %}
                 <div class="alert alert-info" role="alert">
-                    <i class="fas fa-info-circle"></i> <strong>View-Only Access</strong><br>
+                    <i class="bi bi-info-circle"></i> <strong>View-Only Access</strong><br>
                     You have read-only access to this organization. Contact an admin to make changes.
                 </div>
             {% endif %}
             <div class="card">
                 <div class="card-header bg-theme-primary text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-cog"></i> Basic Settings
+                        <i class="bi bi-gear"></i> Basic Settings
                     </h5>
                 </div>
                 <div class="card-body">
@@ -147,7 +147,7 @@
 
                         <div class="mt-4">
                             <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Back to Admin
+                                <i class="bi bi-arrow-left"></i> Back to Admin
                             </a>
                         </div>
                     {% else %}
@@ -203,10 +203,10 @@
                         <!-- Submit Buttons -->
                         <div class="mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Save Changes
+                                <i class="bi bi-save"></i> Save Changes
                             </button>
                             <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                                <i class="bi bi-x"></i> Cancel
                             </a>
                         </div>
                         </form>
@@ -220,7 +220,7 @@
             <div class="card">
                 <div class="card-header bg-theme-secondary text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-info-circle"></i> Organization Info
+                        <i class="bi bi-info-circle"></i> Organization Info
                     </h5>
                 </div>
                 <div class="card-body">

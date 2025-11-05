@@ -1,0 +1,64 @@
+{% load humanize %}
+<table class="table table-hover admin-table">
+    <thead>
+        <tr>
+            <th>Organization</th>
+            <th class="d-none d-md-table-cell">Category</th>
+            <th>Owner</th>
+            <th class="d-none d-md-table-cell">Status</th>
+            <th>Subscription</th>
+            <th class="d-none d-lg-table-cell">Created</th>
+            <th class="action-column">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for org in organizations %}
+        <tr onclick="window.location.href='{% url 'bossin_admin:organization_detail' org.id %}'" style="cursor: pointer;">
+            <td>
+                <strong>{{ org.name }}</strong><br>
+                <small class="text-muted">{{ org.slug }}</small>
+            </td>
+            <td class="d-none d-md-table-cell">
+                <span class="badge bg-secondary">{{ org.get_category_display }}</span>
+            </td>
+            <td>
+                {% for staff in org.staff_members.all %}
+                    {% if staff.role == 'owner' %}
+                        {{ staff.user.username }}
+                    {% endif %}
+                {% empty %}
+                    <span class="text-muted">-</span>
+                {% endfor %}
+            </td>
+            <td class="d-none d-md-table-cell">
+                {% if org.is_active %}
+                    <span class="badge bg-success">Active</span>
+                {% else %}
+                    <span class="badge bg-danger">Suspended</span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="badge bg-{% if org.subscription_status == 'SUBSCRIBED' %}success{% elif org.subscription_status == 'FREE_TRIAL' %}warning{% else %}danger{% endif %}">
+                    {{ org.get_subscription_status_display }}
+                </span>
+                {% if org.subscription_expires_at %}
+                    <br><small class="text-muted d-none d-lg-inline">{{ org.subscription_expires_at|date:"M d, Y" }}</small>
+                {% endif %}
+            </td>
+            <td class="d-none d-lg-table-cell">
+                <small>{{ org.created_at|date:"M d, Y" }}</small>
+            </td>
+            <td class="action-column">
+                <a href="{% url 'bossin_admin:organization_detail' org.id %}" class="btn btn-sm btn-admin" onclick="event.stopPropagation();" title="View">
+                    <i class="bi bi-eye"></i><span class="d-none d-lg-inline ms-1">View</span>
+                </a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="text-center text-muted py-4">No organizations found</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+

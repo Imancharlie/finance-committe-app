@@ -1,0 +1,131 @@
+{% extends "bossin_admin/base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}System Settings - Bossin Admin Portal{% endblock %}
+
+{% block admin_content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><i class="bi bi-gear me-2"></i>System Settings</h1>
+        <p class="text-muted mb-0">Configure global platform settings</p>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <!-- Pricing Settings -->
+    <div class="admin-card mb-4">
+        <h3><i class="bi bi-currency-dollar me-2"></i>Pricing Settings</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">Base Monthly Price (TZS)</label>
+                <input type="number" 
+                       name="base_price_tzs" 
+                       class="form-control" 
+                       value="{{ settings.base_price_tzs }}" 
+                       min="0" 
+                       step="100" 
+                       required>
+                <small class="text-muted">Standard monthly subscription price</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Settings -->
+    <div class="admin-card mb-4">
+        <h3><i class="bi bi-credit-card me-2"></i>Payment Settings</h3>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">M-Pesa Lipa Namba</label>
+                <input type="text" 
+                       name="mpesa_number" 
+                       class="form-control" 
+                       value="{{ settings.mpesa_number }}" 
+                       required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">M-Pesa Account Name</label>
+                <input type="text" 
+                       name="mpesa_account_name" 
+                       class="form-control" 
+                       value="{{ settings.mpesa_account_name }}" 
+                       required>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support Settings -->
+    <div class="admin-card mb-4">
+        <h3><i class="bi bi-headset me-2"></i>Support Settings</h3>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Support Email</label>
+                <input type="email" 
+                       name="support_email" 
+                       class="form-control" 
+                       value="{{ settings.support_email }}" 
+                       required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Support Phone</label>
+                <input type="text" 
+                       name="support_phone" 
+                       class="form-control" 
+                       value="{{ settings.support_phone|default:'' }}">
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Settings -->
+    <div class="admin-card mb-4">
+        <h3><i class="bi bi-cloud-download me-2"></i>Backup Settings</h3>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" 
+                           type="checkbox" 
+                           name="backup_enabled" 
+                           id="backup_enabled"
+                           {% if settings.backup_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="backup_enabled">
+                        Enable Automatic Daily Backups
+                    </label>
+                </div>
+                <small class="text-muted">Backups will run automatically if enabled</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Backup Retention (Days)</label>
+                <input type="number" 
+                       name="backup_retention_days" 
+                       class="form-control" 
+                       value="{{ settings.backup_retention_days }}" 
+                       min="1" 
+                       max="365" 
+                       required>
+                <small class="text-muted">How long to keep backup files</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Backup Location</label>
+                <input type="text" 
+                       name="backup_location" 
+                       class="form-control" 
+                       value="{{ settings.backup_location }}" 
+                       required>
+                <small class="text-muted">Local path or cloud storage bucket</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'bossin_admin:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-admin">
+            <i class="bi bi-save"></i> Save Settings
+        </button>
+    </div>
+</form>
+{% endblock %}
+

@@ -12,6 +12,12 @@ urlpatterns = [
     # Admin interface
     path('admin/', admin.site.urls),
     
+    # Bossin Admin Portal (superuser only) - MUST be before tracker.urls
+    path('bossin-admin/', include('tracker.urls_bossin_admin')),
+    
+    # Django Allauth URLs
+    path('accounts/', include('allauth.urls')),
+    
     # PWA support (temporarily disabled due to Django 5.2 compatibility)
     # path('', include('pwa.urls')),
     

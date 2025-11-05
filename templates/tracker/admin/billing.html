@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Billing - {{ org_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Header -->
+    <div class="col-12 mb-4">
+        <h2 class="fw-bold"><i class="bi bi-receipt me-2"></i>Billing</h2>
+    </div>
+
+    <!-- Subscription Status -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-3 fw-semibold">Subscription Status</h5>
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="badge bg-{% if status_label == 'Subscribed' %}success{% elif status_label == 'Not Subscribed' %}warning{% else %}info{% endif %} px-3 py-2 fs-6">
+                            {{ status_label }}
+                        </span>
+                        {% if status_lines %}
+                        <div class="text-muted mt-2" style="font-size: 0.9rem;">
+                            {% for line in status_lines %}
+                                <div>{{ line }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if status_label == "Not Subscribed" or status_label == "Trial" %}
+                    <a href="#new-subscription" class="btn btn-primary btn-sm">Subscribe</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request History -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-3 fw-semibold">Request History</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle" style="font-size: 0.85rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="fw-semibold" style="width: 30%;">Date</th>
+                                <th class="fw-semibold text-center" style="width: 10%;">M</th>
+                                <th class="fw-semibold" style="width: 30%;">Amount</th>
+                                <th class="fw-semibold" style="width: 30%;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pr in requests %}
+                            <tr class="request-row" role="button" data-bs-toggle="modal" data-bs-target="#pr-modal-{{ pr.id }}">
+                                <td>{{ pr.created_at|date:"Y-m-d" }}</td>
+                                <td class="text-center" style="white-space: nowrap;">{{ pr.months }}</td>
+                                <td>{{ pr.amount_tzs }} TZS</td>
+                                <td>
+                                    <span class="badge bg-{% if pr.status == 'approved' %}success{% elif pr.status == 'declined' %}danger{% else %}secondary{% endif %}">
+                                        {{ pr.status|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <!-- Modal: Request Details -->
+                            <div class="modal fade" id="pr-modal-{{ pr.id }}" tabindex="-1" aria-labelledby="pr-modal-label-{{ pr.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="pr-modal-label-{{ pr.id }}">Request Details</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body" style="font-size: 0.9rem;">
+                                            <p><strong>Date/Time:</strong> {{ pr.created_at|date:"Y-m-d H:i" }}</p>
+                                            <p><strong>Submitted by:</strong> {{ pr.submitted_by.username }}</p>
+                                            <p><strong>Status:</strong> {{ pr.status|title }}</p>
+                                            <p><strong>Months:</strong> {{ pr.months }}</p>
+                                            <p><strong>Amount:</strong> {{ pr.amount_tzs }} TZS</p>
+                                            {% if pr.staff_comment %}
+                                            <p><strong>Staff comment:</strong> {{ pr.staff_comment }}</p>
+                                            {% endif %}
+                                            {% if pr.reference_note %}
+                                            <p><strong>Reference:</strong> {{ pr.reference_note }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-muted text-center py-3">No requests yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Subscription -->
+    <div class="col-lg-8 mx-auto mb-4" id="new-subscription">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4 fw-semibold">New Subscription Request</h5>
+                
+                <div class="text-center mb-4">
+                    <div class="w-100 mb-3 d-flex justify-content-center">
+                        <img src="{% static 'images/mpesa-logo.png'%}" alt="M-Pesa" class="img-fluid" style="max-width: 180px;">
+                    </div>
+                    <div class="alert alert-success w-100 text-center px-4 py-2 mb-0">
+                        <strong>LIPA NAMBA:</strong> <span class="fs-5 fw-bold">68256127</span> <span class="text-muted"><strong>NAME:</strong> MIPT SOFTWARES</span>                    </div>
+                </div>
+
+                <p class="text-muted text-center mb-4" style="font-size: 0.9rem;">
+                    Subscription is monthly. First month: <strong>{{ category_discount }}% discount</strong>. Standard price: <strong>{{ base_price }} TZS/month</strong>.
+                </p>
+                
+                <form method="post" action="{% url 'tracker:onboarding_subscription' org_slug=tenant.slug %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'tracker:org_billing' org_slug=tenant.slug %}">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="months" class="form-label fw-semibold">Number of Months</label>
+                            <input type="number" id="months" name="months" value="1" min="1" max="12" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Amount to Pay</label>
+                            <div id="amount_display" class="form-control bg-light fw-bold text-success border-0">0 TZS</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border mb-3" style="font-size: 0.85rem;">
+                        <div id="amount_breakdown" class="text-muted"></div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="payment_method" class="form-label fw-semibold">Payment Method</label>
+                            <select id="payment_method" name="payment_method" class="form-select">
+                                <option value="mobile_payment" selected>Mobile Payment</option>
+                                <option value="wakala">Wakala/Agent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="amount_sent" class="form-label fw-semibold">Amount Sent</label>
+                            <input type="number" id="amount_sent" name="amount_sent" class="form-control" placeholder="Enter amount" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="payment_reference" class="form-label fw-semibold">Payment Reference</label>
+                        <input type="text" id="payment_reference" name="payment_reference" class="form-control" placeholder="Phone number or Wakala name" required>
+                    </div>
+
+                    <button type="button" class="btn btn-warning btn-lg w-100 fw-semibold" data-bs-toggle="modal" data-bs-target="#payment-preview-modal">
+                        Review & Submit Request
+                    </button>
+
+                    <!-- Preview Modal -->
+                    <div class="modal fade" id="payment-preview-modal" tabindex="-1" aria-labelledby="payment-preview-modal-label" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-light">
+                                    <h5 class="modal-title fw-semibold" id="payment-preview-modal-label">Confirm Payment Details</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                    <div class="modal-body">
+                        <div class="mb-2" style="font-size: 0.95rem;">
+                                        <strong>Payment Method:</strong>
+                                        <div id="preview_payment_method" class="text-muted"></div>
+                                    </div>
+                        <div class="mb-2" style="font-size: 0.95rem;">
+                                        <strong>Payment Reference:</strong>
+                                        <div id="preview_payment_reference" class="text-muted"></div>
+                                    </div>
+                        <div class="mb-2" style="font-size: 0.95rem;">
+                                        <strong>Amount Sent:</strong>
+                            <div id="preview_amount_sent" class="text-success fw-bold"></div>
+                                    </div>
+                                    <div class="alert alert-info mb-0" style="font-size: 0.9rem;">
+                                        Please verify all details before submitting.
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary px-4">Submit Request</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function() {
+        const basePrice = {{ base_price }};
+        const discount = {{ category_discount }};
+        const monthsInput = document.getElementById('months');
+        const amountEl = document.getElementById('amount_display');
+        const breakdownEl = document.getElementById('amount_breakdown');
+        const paymentMethod = document.getElementById('payment_method');
+        const paymentReference = document.getElementById('payment_reference');
+        const amountSent = document.getElementById('amount_sent');
+
+        function formatTZS(n) {
+            try { return new Intl.NumberFormat('en-US').format(n); } catch(e) { return n.toString(); }
+        }
+
+        function recalc() {
+            let raw = monthsInput.value;
+            let m = parseInt(raw === '' ? '0' : raw, 10);
+            if (isNaN(m) || m < 0) m = 0;
+            if (m > 12) m = 12;
+
+            const firstMonth = m >= 1 ? basePrice * (100 - discount) / 100 : 0;
+            const rest = m >= 2 ? basePrice * (m - 1) : 0;
+            const total = Math.round((firstMonth + rest) * 100) / 100;
+
+            amountEl.textContent = formatTZS(total) + ' TZS';
+            if (m >= 1) {
+                breakdownEl.innerHTML = `<strong>First month:</strong> ${formatTZS(firstMonth)} TZS (${discount}% discount)` + 
+                    (m > 1 ? ` | <strong>Next ${m - 1} month(s):</strong> ${formatTZS(rest)} TZS` : '');
+            } else {
+                breakdownEl.textContent = 'Enter number of months to see breakdown';
+            }
+        }
+
+        function previewPayment() {
+            document.getElementById('preview_payment_method').textContent = paymentMethod.options[paymentMethod.selectedIndex].text;
+            document.getElementById('preview_payment_reference').textContent = paymentReference.value || '—';
+            document.getElementById('preview_amount_sent').textContent = (amountSent.value || '0') + ' TZS';
+        }
+
+        monthsInput.addEventListener('input', recalc);
+        paymentMethod.addEventListener('change', previewPayment);
+        paymentReference.addEventListener('input', previewPayment);
+        amountSent.addEventListener('input', previewPayment);
+
+        document.querySelector('[data-bs-toggle="modal"]').addEventListener('click', previewPayment);
+
+        recalc();
+    })();
+</script>
+{% endblock %}

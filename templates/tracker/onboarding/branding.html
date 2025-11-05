@@ -5,11 +5,22 @@
 {% block content %}
 <div class="onboarding-header">
     <h1><i class="bi bi-palette me-2"></i>Organization Branding & Theme</h1>
-    <p>Customize your organization's appearance and branding</p>
+    <p>Select your category to auto-apply a default theme. Colors are set by category.</p>
 </div>
 
 <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
+
+    <!-- Category Selection -->
+    <div class="form-group">
+        <label for="category">Organization Category</label>
+        <select id="category" name="category">
+            {% for value, label in category_choices %}
+                <option value="{{ value }}" {% if organization.category == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <small>We’ll set default colors based on the category (no need to pick a theme).</small>
+    </div>
 
     <!-- Navbar Title -->
     <div class="form-group">
@@ -54,32 +65,7 @@
         <small>Text that appears on exported reports</small>
     </div>
 
-    <!-- Colors -->
-    <div class="form-group">
-        <label>Brand Colors</label>
-        <div class="color-picker-group">
-            <div class="color-input">
-                <input type="color" id="primary_color" name="primary_color" value="{{ theme.primary_color }}">
-                <label for="primary_color">Primary</label>
-            </div>
-            <div class="color-input">
-                <input type="color" id="secondary_color" name="secondary_color" value="{{ theme.secondary_color }}">
-                <label for="secondary_color">Secondary</label>
-            </div>
-            <div class="color-input">
-                <input type="color" id="success_color" name="success_color" value="{{ theme.success_color }}">
-                <label for="success_color">Success</label>
-            </div>
-            <div class="color-input">
-                <input type="color" id="warning_color" name="warning_color" value="{{ theme.warning_color }}">
-                <label for="warning_color">Warning</label>
-            </div>
-            <div class="color-input">
-                <input type="color" id="danger_color" name="danger_color" value="{{ theme.danger_color }}">
-                <label for="danger_color">Danger</label>
-            </div>
-        </div>
-    </div>
+    <!-- Colors are set automatically by category; no manual selection -->
 
     <div class="button-group">
         <button type="submit" class="btn-action btn-next">

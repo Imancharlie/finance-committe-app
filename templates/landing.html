@@ -62,7 +62,7 @@
             align-items: center;
             justify-content: center;
             padding: 4rem 1.5rem 3rem;
-            padding-top: 10rem;
+            padding-top: 12rem; /* Increased from 10rem to give more space */
             position: relative;
             z-index: 1;
         }
@@ -85,7 +85,7 @@
         .navbar-brand {
             color: #7492b9 !important;
             font-weight: 700;
-            font-size: 2rem;
+            font-size: 2.5rem; /* Increased from 2rem */
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -99,7 +99,7 @@
         }
 
         .navbar-brand i {
-            font-size: 2.5rem;
+            font-size: 3rem; /* Increased from 2.5rem */
             color: #7492b9;
         }
 
@@ -581,23 +581,23 @@
             }
 
             .navbar-brand {
-                font-size: 2rem;
+                font-size: 2.5rem; /* Increased from 2rem */
             }
 
             .navbar-brand i {
-                font-size: 2.5rem;
+                font-size: 3rem; /* Increased from 2.5rem */
             }
 
             .landing-wrapper {
                 padding: 3rem 1rem;
-                padding-top: 7rem;
+                padding-top: 9rem; /* Increased from 7rem to account for larger navbar */
             }
         }
 
         @media (max-width: 480px) {
             .landing-wrapper {
                 padding: 1.5rem 1rem;
-                padding-top: 3rem;
+                padding-top: 6rem; /* Increased from 4rem for better spacing on small screens */
             }
 
             .landing-hero h1 {
@@ -640,11 +640,11 @@
             }
 
             .navbar-brand {
-                font-size: 1rem;
+                font-size: 1.8rem; /* Increased from 1rem */
             }
 
             .navbar-brand i {
-                font-size: 1.2rem;
+                font-size: 2rem; /* Increased from 1.2rem */
             }
 
             .logo {
@@ -654,6 +654,476 @@
 
             .logo i {
                 font-size: 1.5rem;
+            }
+        }
+
+        /* ==================== NEW SECTIONS STYLING ==================== */
+
+        /* Hero CTA Buttons */
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-cta {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #7492b9 0%, #5a7a9e 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(116, 146, 185, 0.3);
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(116, 146, 185, 0.4);
+            color: white;
+        }
+
+        .btn-cta-outline {
+            padding: 1rem 2rem;
+            background: transparent;
+            color: var(--primary-color);
+            text-decoration: none;
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cta-outline:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        /* Section Common Styles */
+        section {
+            padding: 4rem 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #7492b9 0%, #5a7a9e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+
+        /* Slideshow Section */
+        .slideshow-section {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .modern-carousel {
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(116, 146, 185, 0.2);
+        }
+
+        .carousel-content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4rem 3rem;
+            text-align: center;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .carousel-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #7492b9 0%, #5a7a9e 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(116, 146, 185, 0.3);
+        }
+
+        .carousel-icon i {
+            font-size: 3rem;
+            color: white;
+        }
+
+        .carousel-content h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .carousel-content p {
+            font-size: 1.1rem;
+            color: #666;
+            line-height: 1.8;
+            max-width: 600px;
+        }
+
+        .carousel-indicators button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #7492b9;
+            opacity: 0.5;
+        }
+
+        .carousel-indicators button.active {
+            opacity: 1;
+        }
+
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            background-color: #7492b9;
+            border-radius: 50%;
+            padding: 1.5rem;
+        }
+
+        /* Features Section */
+        .features-section {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(116, 146, 185, 0.25);
+        }
+
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #7492b9 0%, #5a7a9e 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .feature-icon i {
+            font-size: 2rem;
+            color: white;
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Statistics Section */
+        .stats-section {
+            background: linear-gradient(135deg, #7492b9, rgba(116, 146, 185, 0.9));
+            color: white;
+            padding: 4rem 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .stat-item {
+            padding: 1.5rem;
+        }
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+
+        /* Testimonials Section */
+        .testimonials-section {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(116, 146, 185, 0.25);
+        }
+
+        .testimonial-rating {
+            color: #ffc107;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .testimonial-text {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #495057;
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7492b9, #5a7a9e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .author-info h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.2rem;
+        }
+
+        .author-info p {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin: 0;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .faq-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .accordion-item {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .accordion-button {
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 1.2rem 1.5rem;
+            border: none;
+            box-shadow: none;
+        }
+
+        .accordion-button:not(.collapsed) {
+            background: linear-gradient(135deg, #7492b9, #5a7a9e);
+            color: white;
+        }
+
+        .accordion-button:focus {
+            box-shadow: none;
+            border: none;
+        }
+
+        .accordion-button::after {
+            background-image: none;
+            content: '\f282';
+            font-family: 'bootstrap-icons';
+            font-size: 1.2rem;
+        }
+
+        .accordion-button:not(.collapsed)::after {
+            transform: rotate(180deg);
+        }
+
+        .accordion-body {
+            padding: 1.5rem;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: #495057;
+        }
+
+        /* Mobile Responsive for New Sections */
+        @media (max-width: 768px) {
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .section-subtitle {
+                font-size: 0.95rem;
+            }
+
+            section {
+                padding: 2.5rem 0;
+            }
+
+            .hero-cta {
+                flex-direction: column;
+            }
+
+            .btn-cta, .btn-cta-outline {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .carousel-content {
+                padding: 2.5rem 1.5rem;
+                min-height: 300px;
+            }
+
+            .carousel-icon {
+                width: 70px;
+                height: 70px;
+            }
+
+            .carousel-icon i {
+                font-size: 2rem;
+            }
+
+            .carousel-content h3 {
+                font-size: 1.4rem;
+            }
+
+            .carousel-content p {
+                font-size: 0.95rem;
+            }
+
+            .features-grid,
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 2rem;
+            }
+
+            .stat-number {
+                font-size: 2.5rem;
+            }
+
+            .stat-label {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .btn-cta, .btn-cta-outline {
+                padding: 0.85rem 1.5rem;
+                font-size: 0.9rem;
+            }
+
+            .carousel-content {
+                padding: 2rem 1rem;
+            }
+
+            .feature-card,
+            .testimonial-card {
+                padding: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
             }
         }
     </style>
@@ -676,28 +1146,16 @@
                     <h1>Manage Your Finance Tracking Effortlessly</h1>
                     <p>Bossin is a modern, multi-tenant platform designed to help organizations track contributions, manage members, and generate professional reports.</p>
                     
-                    <ul class="feature-list">
-                        <li>
-                            <i class="bi bi-check-circle-fill" style="color: #28a745;"></i>
-                            <span>Track member contributions in real-time</span>
-                        </li>
-                        <li>
-                            <i class="bi bi-check-circle-fill" style="color: #28a745;"></i>
-                            <span>Manage staff and permissions easily</span>
-                        </li>
-                        <li>
-                            <i class="bi bi-check-circle-fill" style="color: #28a745;"></i>
-                            <span>Generate Excel & PDF reports</span>
-                        </li>
-                        <li>
-                            <i class="bi bi-check-circle-fill" style="color: #28a745;"></i>
-                            <span>Customize branding and themes</span>
-                        </li>
-                        <li>
-                            <i class="bi bi-check-circle-fill" style="color: #28a745;"></i>
-                            <span>Secure multi-tenant architecture</span>
-                        </li>
-                    </ul>
+                    <div class="hero-cta">
+                        <a href="{% url 'tracker:signup' %}" class="btn-cta">
+                            <i class="bi bi-rocket-takeoff"></i>
+                            Get Started Free
+                        </a>
+                        <a href="#features" class="btn-cta-outline">
+                            <i class="bi bi-play-circle"></i>
+                            Learn More
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Auth Card -->
@@ -715,15 +1173,10 @@
                             <i class="bi bi-person-plus"></i>
                             Create Account
                         </a>
-
-                        <div class="divider">
-                            <span>or</span>
-                        </div>
-
-                        <button class="btn-auth btn-google" onclick="alert('Google OAuth coming soon!')">
-                            <i class="bi bi-google"></i>
-                            Sign up with Google
-                        </button>
+                        <a href="{% url 'tracker:login' %}" class="btn-auth btn-login">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                            Sign In
+                        </a>
                     </div>
 
                     <div style="margin-top: 2rem; text-align: center; color: #666; font-size: 0.9rem;">
@@ -737,6 +1190,308 @@
             </div>
         </div>
     </div>
+
+    <!-- Modern Slideshow Section -->
+    <section class="slideshow-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">See Bossin in Action</h2>
+                <p class="section-subtitle">Discover how our platform transforms financial management</p>
+            </div>
+
+            <div id="bossInCarousel" class="carousel slide modern-carousel" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#bossInCarousel" data-bs-slide-to="0" class="active"></button>
+                    <button type="button" data-bs-target="#bossInCarousel" data-bs-slide-to="1"></button>
+                    <button type="button" data-bs-target="#bossInCarousel" data-bs-slide-to="2"></button>
+                </div>
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <div class="carousel-content">
+                            <div class="carousel-icon">
+                                <i class="bi bi-graph-up-arrow"></i>
+                            </div>
+                            <h3>Real-Time Analytics Dashboard</h3>
+                            <p>Track all contributions, progress, and member activities with beautiful visual charts and instant updates</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="carousel-content">
+                            <div class="carousel-icon">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <h3>Effortless Member Management</h3>
+                            <p>Add, edit, and organize members with smart filtering, bulk imports, and automated payment tracking</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="carousel-content">
+                            <div class="carousel-icon">
+                                <i class="bi bi-palette-fill"></i>
+                            </div>
+                            <h3>Customizable Branding</h3>
+                            <p>Make it yours with custom logos, colors, and themes that reflect your organization's identity</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#bossInCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#bossInCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Powerful Features</h2>
+                <p class="section-subtitle">Everything you need to manage finances efficiently</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                    <h3>Real-Time Tracking</h3>
+                    <p>Track member contributions in real-time with instant updates and notifications</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <h3>Secure & Private</h3>
+                    <p>Bank-level security with data isolation and role-based access control</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <h3>Professional Reports</h3>
+                    <p>Generate Excel & PDF reports with custom branding and watermarks</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-phone"></i>
+                    </div>
+                    <h3>Mobile Friendly</h3>
+                    <p>Access from any device - desktop, tablet, or smartphone</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h3>Team Collaboration</h3>
+                    <p>Manage staff with different permission levels and roles</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-cloud-upload"></i>
+                    </div>
+                    <h3>Bulk Import</h3>
+                    <p>Import members from Excel files with one click</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" data-target="500">0</div>
+                    <div class="stat-label">Organizations</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-target="10000">0</div>
+                    <div class="stat-label">Active Members</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-target="50000">0</div>
+                    <div class="stat-label">Transactions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-target="99">0</div>
+                    <div class="stat-label">% Uptime</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">What Our Users Say</h2>
+                <p class="section-subtitle">Trusted by organizations worldwide</p>
+            </div>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                    </div>
+                    <p class="testimonial-text">"Bossin has transformed how we manage our church finances. The dashboard is intuitive and the reporting features are excellent!"</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                        <div class="author-info">
+                            <h4>Pastor John Mwangi</h4>
+                            <p>Grace Community Church</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                    </div>
+                    <p class="testimonial-text">"The multi-tenant feature is perfect for our organization. Each branch manages their own data while we maintain oversight. Brilliant!"</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                        <div class="author-info">
+                            <h4>Sarah Kimani</h4>
+                            <p>NGO Director</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                    </div>
+                    <p class="testimonial-text">"Easy to use, powerful features, and excellent support. Bossin has everything we need for member contribution tracking."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                        <div class="author-info">
+                            <h4>David Ochieng</h4>
+                            <p>Finance Committee Chair</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Frequently Asked Questions</h2>
+                <p class="section-subtitle">Got questions? We've got answers</p>
+            </div>
+
+            <div class="faq-container">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                <i class="bi bi-question-circle me-2"></i>
+                                What is Bossin and who is it for?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Bossin is a modern finance tracking platform designed for organizations, churches, NGOs, and groups that need to manage member contributions, pledges, and payments. It's perfect for finance committees, treasurers, and administrators.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                <i class="bi bi-question-circle me-2"></i>
+                                Is my data secure?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Absolutely! We use bank-level encryption, secure data isolation, and role-based access control. Each organization's data is completely separate and protected. We also perform regular security audits and backups.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                <i class="bi bi-question-circle me-2"></i>
+                                Can I customize the platform with my branding?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yes! You can upload your organization's logo, choose custom colors, set your own theme, and even customize the watermark text that appears on reports. Make it truly yours!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                <i class="bi bi-question-circle me-2"></i>
+                                How do I import existing members?
+                            </button>
+                        </h2>
+                        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                You can easily import members from Excel files. Just download our template, fill in your member data, and upload it. The system will automatically create all member records with their information.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                                <i class="bi bi-question-circle me-2"></i>
+                                Can multiple people manage the organization?
+                            </button>
+                        </h2>
+                        <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yes! You can add staff members with different roles: Owner (full access), Admin (manage staff and settings), Staff (record transactions), and Viewer (read-only). Each role has appropriate permissions.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
+                                <i class="bi bi-question-circle me-2"></i>
+                                What kind of reports can I generate?
+                            </button>
+                        </h2>
+                        <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                You can export member lists, transaction histories, and financial summaries in both Excel and PDF formats. All reports include your custom branding and can be filtered by date, status, or other criteria.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
     <footer class="footer-landing">
@@ -775,5 +1530,73 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Animated Counter for Statistics
+        function animateCounter(element) {
+            const target = parseInt(element.getAttribute('data-target'));
+            const duration = 2000; // 2 seconds
+            const increment = target / (duration / 16); // 60fps
+            let current = 0;
+
+            const updateCounter = () => {
+                current += increment;
+                if (current < target) {
+                    element.textContent = Math.floor(current).toLocaleString();
+                    requestAnimationFrame(updateCounter);
+                } else {
+                    element.textContent = target.toLocaleString();
+                }
+            };
+
+            updateCounter();
+        }
+
+        // Intersection Observer for Statistics Section
+        const statsObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const counters = entry.target.querySelectorAll('.stat-number');
+                    counters.forEach(counter => {
+                        if (!counter.classList.contains('animated')) {
+                            counter.classList.add('animated');
+                            animateCounter(counter);
+                        }
+                    });
+                }
+            });
+        }, { threshold: 0.5 });
+
+        // Observe the statistics section
+        document.addEventListener('DOMContentLoaded', () => {
+            const statsSection = document.querySelector('.stats-section');
+            if (statsSection) {
+                statsObserver.observe(statsSection);
+            }
+
+            // Auto-start carousel with 5 second interval
+            const carousel = document.querySelector('#bossInCarousel');
+            if (carousel) {
+                const bsCarousel = new bootstrap.Carousel(carousel, {
+                    interval: 5000,
+                    ride: 'carousel'
+                });
+            }
+
+            // Smooth scroll for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

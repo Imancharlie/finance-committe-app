@@ -1,0 +1,459 @@
+{% extends "bossin_admin/base.html" %}
+{% load static %}
+{% load custom_filters %}
+{% load humanize %}
+
+{% block title %}Dashboard - Bossin Admin Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .compact-stat-card {
+        background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        height: 100%;
+        min-height: 85px;
+    }
+
+    .compact-stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+    }
+
+    .compact-stat-card .stat-icon {
+        font-size: 1.4rem;
+        opacity: 0.9;
+        margin-bottom: 0.25rem;
+    }
+
+    .compact-stat-card .stat-value {
+        font-size: 1.6rem;
+        font-weight: 800;
+        line-height: 1;
+        margin: 0.25rem 0;
+    }
+
+    .compact-stat-card .stat-label {
+        font-size: 0.65rem;
+        opacity: 0.95;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+
+    .compact-stat-card.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .compact-stat-card.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .compact-stat-card.secondary {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: #fff;
+    }
+
+    .compact-stat-card.primary {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #4f7aa8 100%);
+        color: #fff;
+    }
+
+    .mini-card {
+        background: var(--admin-card);
+        border: 1px solid var(--admin-border);
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .mini-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transform: translateY(-2px);
+    }
+
+    .mini-card h3 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        color: var(--admin-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .mini-card .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.4rem 0;
+        font-size: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .mini-card .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .compact-table {
+        font-size: 0.75rem;
+    }
+
+    .compact-table th {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .compact-table td {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.72rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .page-header p {
+        font-size: 0.78rem;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 180px;
+        margin-top: 0.5rem;
+    }
+
+    .category-box {
+        text-align: center;
+        padding: 0.6rem 0.4rem;
+        border: 1px solid var(--admin-border);
+        border-radius: 8px;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .category-box:hover {
+        border-color: var(--admin-primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+
+    .category-box .count {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--admin-primary);
+    }
+
+    .category-box .label {
+        font-size: 0.68rem;
+        color: var(--admin-text-light);
+    }
+
+    @media (max-width: 767.98px) {
+        .compact-stat-card {
+            min-height: 80px;
+        }
+        
+        .compact-stat-card .stat-value {
+            font-size: 1.4rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<!-- Page Header -->
+<div class="page-header d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+        <p class="text-muted mb-0">Platform overview and analytics</p>
+    </div>
+    <span class="badge bg-success" style="font-size: 0.7rem;">System Operational</span>
+</div>
+
+<!-- Key Metrics -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg-3">
+        <div class="compact-stat-card primary">
+            <i class="bi bi-building stat-icon"></i>
+            <div class="stat-value">{{ total_orgs }}</div>
+            <div class="stat-label">Organizations</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="compact-stat-card success">
+            <i class="bi bi-check-circle stat-icon"></i>
+            <div class="stat-value">{{ subscribed_orgs }}</div>
+            <div class="stat-label">Subscribed</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="compact-stat-card warning">
+            <i class="bi bi-hourglass-split stat-icon"></i>
+            <div class="stat-value">{{ pending_requests }}</div>
+            <div class="stat-label">Pending</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="compact-stat-card secondary">
+            <i class="bi bi-cash-coin stat-icon"></i>
+            <div class="stat-value">{{ total_revenue|intcomma }}</div>
+            <div class="stat-label">Revenue (TZS)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Stats -->
+<div class="row g-2 mb-3">
+    <div class="col-md-4">
+        <div class="mini-card">
+            <h3><i class="bi bi-info-circle"></i>Org Status</h3>
+            <div class="info-row">
+                <span>Active:</span>
+                <strong>{{ active_orgs }}</strong>
+            </div>
+            <div class="info-row">
+                <span>Trial:</span>
+                <strong class="text-warning">{{ trial_orgs }}</strong>
+            </div>
+            <div class="info-row">
+                <span>Expired:</span>
+                <strong class="text-danger">{{ expired_orgs }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mini-card">
+            <h3><i class="bi bi-credit-card"></i>Subscriptions</h3>
+            <div class="info-row">
+                <span>Pending:</span>
+                <strong class="text-warning">{{ pending_requests }}</strong>
+            </div>
+            <div class="info-row">
+                <span>Approved Today:</span>
+                <strong class="text-success">{{ approved_today }}</strong>
+            </div>
+            <div class="info-row">
+                <span>Monthly:</span>
+                <strong>{{ monthly_revenue|intcomma }} TZS</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mini-card">
+            <h3><i class="bi bi-cloud-download"></i>Backup</h3>
+            {% if latest_backup %}
+            <div class="info-row">
+                <span>Status:</span>
+                <span class="badge bg-{% if backup_health == 'healthy' %}success{% else %}warning{% endif %}" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
+                    {{ backup_health|title }}
+                </span>
+            </div>
+            <div class="info-row">
+                <span>Latest:</span>
+                <small>{{ latest_backup|date:"M d, H:i" }}</small>
+            </div>
+            <div class="info-row">
+                <span>Size:</span>
+                <small>{{ latest_backup.stat.st_size|filesizeformat }}</small>
+            </div>
+            {% else %}
+            <div class="text-muted" style="font-size: 0.75rem;">No backups found</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-2 mb-3">
+    <div class="col-lg-6">
+        <div class="mini-card">
+            <h3><i class="bi bi-bar-chart"></i>Revenue Trend</h3>
+            <div class="chart-container">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="mini-card">
+            <h3><i class="bi bi-pie-chart"></i>Organization Status</h3>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row g-2 mb-3">
+    <div class="col-lg-6">
+        <div class="mini-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="mb-0"><i class="bi bi-clock-history"></i>Payment Requests</h3>
+                <a href="{% url 'bossin_admin:subscriptions' %}" class="btn btn-sm btn-admin" style="font-size: 0.7rem; padding: 0.35rem 0.75rem;">View All</a>
+            </div>
+            {% if recent_requests %}
+            <div class="table-responsive">
+                <table class="table table-hover compact-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Organization</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th class="d-none d-md-table-cell">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in recent_requests %}
+                        <tr>
+                            <td>{{ req.organization.name|truncatewords:2 }}</td>
+                            <td>{{ req.amount_tzs|intcomma }}</td>
+                            <td>
+                                <span class="badge bg-{% if req.status == 'approved' %}success{% elif req.status == 'declined' %}danger{% else %}warning{% endif %}" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
+                                    {{ req.status|title }}
+                                </span>
+                            </td>
+                            <td class="d-none d-md-table-cell">{{ req.created_at|date:"M d" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0" style="font-size: 0.75rem;">No recent requests</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="mini-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="mb-0"><i class="bi bi-building"></i>Recent Orgs</h3>
+                <a href="{% url 'bossin_admin:organizations' %}" class="btn btn-sm btn-admin" style="font-size: 0.7rem; padding: 0.35rem 0.75rem;">View All</a>
+            </div>
+            {% if recent_orgs %}
+            <div class="table-responsive">
+                <table class="table table-hover compact-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th class="d-none d-md-table-cell">Category</th>
+                            <th>Status</th>
+                            <th class="d-none d-lg-table-cell">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for org in recent_orgs %}
+                        <tr style="cursor: pointer;" onclick="window.location.href='{% url 'bossin_admin:organization_detail' org.id %}'">
+                            <td>{{ org.name|truncatewords:3 }}</td>
+                            <td class="d-none d-md-table-cell">{{ org.get_category_display }}</td>
+                            <td>
+                                <span class="badge bg-{% if org.subscription_status == 'SUBSCRIBED' %}success{% elif org.subscription_status == 'FREE_TRIAL' %}warning{% else %}danger{% endif %}" style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
+                                    {{ org.get_subscription_status_display }}
+                                </span>
+                            </td>
+                            <td class="d-none d-lg-table-cell">{{ org.created_at|date:"M d" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0" style="font-size: 0.75rem;">No organizations yet</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Category Distribution -->
+{% if category_dist %}
+<div class="mini-card">
+    <h3><i class="bi bi-grid"></i>Category Distribution</h3>
+    <div class="row g-2">
+        {% for cat in category_dist %}
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="category-box">
+                <div class="count">{{ cat.count }}</div>
+                <div class="label">{{ cat.category|title }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Revenue Trend Chart
+const revenueCtx = document.getElementById('revenueChart');
+if (revenueCtx) {
+    new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+            labels: {{ revenue_labels_json|safe }},
+            datasets: [{
+                label: 'Revenue (TZS)',
+                data: {{ revenue_values_json|safe }},
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { 
+                    beginAtZero: true,
+                    ticks: { font: { size: 10 } }
+                },
+                x: {
+                    ticks: { font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
+// Status Pie Chart
+const statusCtx = document.getElementById('statusChart');
+if (statusCtx) {
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Active', 'Trial', 'Expired'],
+            datasets: [{
+                data: [{{ active_orgs }}, {{ trial_orgs }}, {{ expired_orgs }}],
+                backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { 
+                        font: { size: 10 },
+                        padding: 10
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

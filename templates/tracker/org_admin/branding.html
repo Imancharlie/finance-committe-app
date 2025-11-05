@@ -177,29 +177,7 @@
 
                
 
-                <!-- Text & Watermark Section -->
-                <div class="card mb-4">
-                    
-                    <div class="card-body">
-                        <!-- Navbar Title -->
-                        <div class="mb-3">
-                            <label for="{{ form.navbar_title.id_for_label }}" class="form-label">
-                                {{ form.navbar_title.label }}
-                            </label>
-                            {{ form.navbar_title }}
-                            {% if form.navbar_title.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.navbar_title.errors }}
-                                </div>
-                            {% endif %}
-                            <small class="form-text text-muted">
-                                Leave blank to use organization name
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Submit Buttons -->
+                               <!-- Submit Buttons -->
                 <div class="mb-4">
                     {% if not is_org_viewer %}
                         <button type="submit" class="btn btn-primary btn-lg">
@@ -220,7 +198,7 @@
             <div class="card sticky-top" style="top: 20px;">
                 <div class="card-header bg-theme-secondary text-dark">
                     <h5 class="mb-0">
-                        <i class="fas fa-eye"></i> Preview
+                        <i class="bi bi-eye"></i> Preview
                     </h5>
                 </div>
                 <div class="card-body">
@@ -231,43 +209,6 @@
                             <p class="text-muted small">Logo:</p>
                             <img src="{{ theme.logo.url }}" alt="Logo" class="img-fluid" style="max-width: 100%;">
                         </div>
-                    {% endif %}
-
-                    <p class="mb-2">
-                        <strong>Primary Color:</strong><br>
-                        <div style="width: 100%; height: 30px; background-color: {{ theme.primary_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
-                        <code>{{ theme.primary_color }}</code>
-                    </p>
-
-                    <p class="mb-2">
-                        <strong>Secondary Color:</strong><br>
-                        <div style="width: 100%; height: 30px; background-color: {{ theme.secondary_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
-                        <code>{{ theme.secondary_color }}</code>
-                    </p>
-
-                    <p class="mb-2">
-                        <strong>Success Color:</strong><br>
-                        <div style="width: 100%; height: 30px; background-color: {{ theme.success_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
-                        <code>{{ theme.success_color }}</code>
-                    </p>
-
-                    <p class="mb-2">
-                        <strong>Warning Color:</strong><br>
-                        <div style="width: 100%; height: 30px; background-color: {{ theme.warning_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
-                        <code>{{ theme.warning_color }}</code>
-                    </p>
-
-                    <p>
-                        <strong>Danger Color:</strong><br>
-                        <div style="width: 100%; height: 30px; background-color: {{ theme.danger_color }}; border-radius: 4px; border: 1px solid #ddd;"></div>
-                        <code>{{ theme.danger_color }}</code>
-                    </p>
-
-                    {% if theme.watermark_text %}
-                        <p class="mt-3">
-                            <strong>Watermark:</strong><br>
-                            <code>{{ theme.watermark_text }}</code>
-                        </p>
                     {% endif %}
                 </div>
             </div>

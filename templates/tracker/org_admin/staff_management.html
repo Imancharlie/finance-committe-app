@@ -193,12 +193,12 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1 class="mb-2">
-                <i class="fas fa-users-cog"></i> Staff Management
+                <i class="bi bi-people"></i> Staff Management
             </h1>
             <p class="text-muted">
                 {% if is_org_viewer %}
                     <span class="badge bg-info">
-                        <i class="fas fa-eye"></i> View-Only
+                        <i class="bi bi-eye"></i> View-Only
                     </span>
                     View staff members and their roles in {{ organization.name }}
                 {% else %}
@@ -209,11 +209,11 @@
         <div class="col-md-4 text-end">
             {% if can_manage_staff %}
                 <a href="{% url 'tracker:add_staff_member' org_slug=organization.slug %}" class="btn btn-success">
-                    <i class="fas fa-user-plus"></i> Add Staff Member
+                    <i class="bi bi-person-plus"></i> Add Staff Member
                 </a>
             {% endif %}
             <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back
+                <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>
     </div>
@@ -256,30 +256,30 @@
                                     <td>
                                         {% if org_user.role == 'owner' %}
                                             <span class="badge bg-danger">
-                                                <i class="fas fa-crown"></i> Owner
+                                                <i class="bi bi-star"></i> Owner
                                             </span>
                                         {% elif org_user.role == 'admin' %}
                                             <span class="badge bg-warning text-dark">
-                                                <i class="fas fa-shield-alt"></i> Admin
+                                                <i class="bi bi-shield"></i> Admin
                                             </span>
                                         {% elif org_user.role == 'staff' %}
                                             <span class="badge bg-info">
-                                                <i class="fas fa-user-tie"></i> Staff
+                                                <i class="bi bi-person"></i> Staff
                                             </span>
                                         {% else %}
                                             <span class="badge bg-secondary">
-                                                <i class="fas fa-eye"></i> Viewer
+                                                <i class="bi bi-eye"></i> Viewer
                                             </span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if org_user.is_active %}
                                             <span class="badge bg-success">
-                                                <i class="fas fa-check"></i> Active
+                                                <i class="bi bi-check"></i> Active
                                             </span>
                                         {% else %}
                                             <span class="badge bg-danger">
-                                                <i class="fas fa-times"></i> Inactive
+                                                <i class="bi bi-x"></i> Inactive
                                             </span>
                                         {% endif %}
                                     </td>
@@ -307,7 +307,7 @@
                                             {% endif %}
                                         {% else %}
                                             <span class="text-muted small">
-                                                <i class="fas fa-lock"></i> Read-only
+                                                <i class="bi bi-lock"></i> Read-only
                                             </span>
                                         {% endif %}
                                     </td>
@@ -316,7 +316,7 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="4" class="text-center text-muted py-4">
-                                        <i class="fas fa-users"></i> No staff members yet.
+                                        <i class="bi bi-people"></i> No staff members yet.
                                         <a href="{% url 'tracker:add_staff_member' org_slug=organization.slug %}">Add one now</a>
                                     </td>
                                 </tr>
@@ -334,14 +334,14 @@
             <div class="card">
                 <div class="card-header bg-theme-secondary text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-info-circle"></i> Role Descriptions
+                        <i class="bi bi-info-circle"></i> Role Descriptions
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
                             <h6 class="text-danger">
-                                <i class="fas fa-crown"></i> Owner
+                                <i class="bi bi-star"></i> Owner
                             </h6>
                             <p class="small">
                                 Full access to all organization settings, staff management, and data.
@@ -349,7 +349,7 @@
                         </div>
                         <div class="col-md-3">
                             <h6 class="text-warning">
-                                <i class="fas fa-shield-alt"></i> Admin
+                                <i class="bi bi-shield"></i> Admin
                             </h6>
                             <p class="small">
                                 Can manage staff, view reports, and access organization settings.
@@ -357,7 +357,7 @@
                         </div>
                         <div class="col-md-3">
                             <h6 class="text-info">
-                                <i class="fas fa-user-tie"></i> Staff
+                                <i class="bi bi-person"></i> Staff
                             </h6>
                             <p class="small">
                                 Can record transactions, manage members, and view organization data.
@@ -365,7 +365,7 @@
                         </div>
                         <div class="col-md-3">
                             <h6 class="text-secondary">
-                                <i class="fas fa-eye"></i> Viewer
+                                <i class="bi bi-eye"></i> Viewer
                             </h6>
                             <p class="small">
                                 Read-only access to organization data and reports.

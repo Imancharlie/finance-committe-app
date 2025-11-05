@@ -1,0 +1,204 @@
+{% extends "bossin_admin/base.html" %}
+{% load static %}
+{% load custom_filters %}
+{% load humanize %}
+
+{% block title %}{{ organization.name }} - Bossin Admin Portal{% endblock %}
+
+{% block admin_content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><i class="bi bi-building me-2"></i>{{ organization.name }}</h1>
+        <p class="text-muted mb-0">{{ organization.slug }}</p>
+    </div>
+    <div>
+        <a href="{% url 'bossin_admin:organizations' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<!-- Organization Info -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="admin-card">
+            <h3><i class="bi bi-info-circle me-2"></i>Organization Information</h3>
+            <table class="table table-borderless">
+                <tr>
+                    <th width="30%">Name:</th>
+                    <td>{{ organization.name }}</td>
+                </tr>
+                <tr>
+                    <th>Slug:</th>
+                    <td><code>{{ organization.slug }}</code></td>
+                </tr>
+                <tr>
+                    <th>Category:</th>
+                    <td><span class="badge bg-secondary">{{ organization.get_category_display }}</span></td>
+                </tr>
+                <tr>
+                    <th>Status:</th>
+                    <td>
+                        {% if organization.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Suspended</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Subscription:</th>
+                    <td>
+                        <span class="badge bg-{% if organization.subscription_status == 'SUBSCRIBED' %}success{% elif organization.subscription_status == 'FREE_TRIAL' %}warning{% else %}danger{% endif %}">
+                            {{ organization.get_subscription_status_display }}
+                        </span>
+                        {% if organization.subscription_expires_at %}
+                            <br><small class="text-muted">Expires: {{ organization.subscription_expires_at|date:"F d, Y" }}</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Owner:</th>
+                    <td>{% if owner %}{{ owner.user.username }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                </tr>
+                <tr>
+                    <th>Created:</th>
+                    <td>{{ organization.created_at|date:"F d, Y" }}</td>
+                </tr>
+                {% if organization.description %}
+                <tr>
+                    <th>Description:</th>
+                    <td>{{ organization.description }}</td>
+                </tr>
+                {% endif %}
+            </table>
+
+            <!-- Actions -->
+            <div class="mt-4 pt-4 border-top">
+                <h5>Actions</h5>
+                <div class="d-flex gap-2">
+                    {% if organization.is_active %}
+                    <form method="post" action="{% url 'bossin_admin:organization_suspend' organization.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="suspend">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Suspend this organization?')">
+                            <i class="bi bi-pause-circle"></i> Suspend
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'bossin_admin:organization_suspend' organization.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reactivate">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-play-circle"></i> Reactivate
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'tracker:dashboard' org_slug=organization.slug %}" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-up-right"></i> View Tenant Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="col-md-4">
+        <div class="admin-card mb-3">
+            <h5><i class="bi bi-bar-chart me-2"></i>Statistics</h5>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Members:</span>
+                <strong>{{ members_count }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Staff:</span>
+                <strong>{{ staff_count }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Transactions:</span>
+                <strong>{{ transactions_count }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Total Collected:</span>
+                <strong>{{ total_collected|intcomma }} TZS</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Requests -->
+<div class="admin-card mb-4">
+    <h3><i class="bi bi-credit-card me-2"></i>Payment Requests</h3>
+    {% if payment_requests %}
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Months</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Reference</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pr in payment_requests %}
+                <tr>
+                    <td>{{ pr.created_at|date:"M d, Y" }}</td>
+                    <td>{{ pr.months }}</td>
+                    <td>{{ pr.amount_tzs|intcomma }} TZS</td>
+                    <td>
+                        <span class="badge bg-{% if pr.status == 'approved' %}success{% elif pr.status == 'declined' %}danger{% else %}warning{% endif %}">
+                            {{ pr.status|title }}
+                        </span>
+                    </td>
+                    <td><small>{{ pr.reference_note|default:"-" }}</small></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No payment requests</p>
+    {% endif %}
+</div>
+
+<!-- Staff Members -->
+<div class="admin-card">
+    <h3><i class="bi bi-people me-2"></i>Staff Members</h3>
+    {% if staff_members %}
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for staff in staff_members %}
+                <tr>
+                    <td>{{ staff.user.username }}</td>
+                    <td><span class="badge bg-info">{{ staff.get_role_display }}</span></td>
+                    <td><small>{{ staff.joined_at|date:"M d, Y" }}</small></td>
+                    <td>
+                        {% if staff.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No staff members</p>
+    {% endif %}
+</div>
+{% endblock %}
+

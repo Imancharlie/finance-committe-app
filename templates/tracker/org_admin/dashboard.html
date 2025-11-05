@@ -214,12 +214,12 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1 class="mb-2">
-                <i class="fas fa-cog"></i> Organization Admin Dashboard
+                <i class="bi bi-gear"></i> Organization Admin Dashboard
             </h1>
             <p class="text-muted">
                 {% if is_org_viewer %}
                     <span class="badge bg-info">
-                        <i class="fas fa-eye"></i> View-Only Access
+                        <i class="bi bi-eye"></i> View-Only Access
                     </span>
                     View {{ organization.name }} settings, branding, and staff
                 {% else %}
@@ -229,7 +229,7 @@
         </div>
         <div class="col-md-4 text-end">
             <a href="{% url 'tracker:dashboard' org_slug=organization.slug %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
             </a>
         </div>
     </div>
@@ -276,17 +276,18 @@
             <div class="card">
                 <div class="card-header bg-theme-primary text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-sliders-h"></i> Administration
+                        <i class="bi bi-sliders"></i> Administration
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <!-- Organization Settings -->
+                        <!-- Organization Settings - Owner only -->
+                        {% if is_org_owner %}
                         <div class="col-md-6 mb-3">
                             <div class="card border-0 bg-light {% if is_org_viewer %}opacity-75{% endif %}">
                                 <div class="card-body">
                                     <h5 class="card-title">
-                                        <i class="fas fa-building text-primary"></i> Organization Settings
+                                        <i class="bi bi-building text-primary"></i> Organization Settings
                                     </h5>
                                     <p class="card-text text-muted">
                                         {% if is_org_viewer %}
@@ -297,23 +298,23 @@
                                     </p>
                                     {% if can_edit_org %}
                                         <a href="{% url 'tracker:org_settings' org_slug=organization.slug %}" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-edit"></i> Edit Settings
+                                            <i class="bi bi-pencil"></i> Edit Settings
                                         </a>
                                     {% else %}
                                         <button class="btn btn-secondary btn-sm" disabled title="Read-only access">
-                                            <i class="fas fa-lock"></i> View Only
+                                            <i class="bi bi-lock"></i> View Only
                                         </button>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Branding & Theme -->
+                        <!-- Branding & Theme - Owner only -->
                         <div class="col-md-6 mb-3">
                             <div class="card border-0 bg-light {% if is_org_viewer %}opacity-75{% endif %}">
                                 <div class="card-body">
                                     <h5 class="card-title">
-                                        <i class="fas fa-palette text-success"></i> Branding & Theme
+                                        <i class="bi bi-palette text-success"></i> Branding & Theme
                                     </h5>
                                     <p class="card-text text-muted">
                                         {% if is_org_viewer %}
@@ -324,23 +325,62 @@
                                     </p>
                                     {% if can_edit_org %}
                                         <a href="{% url 'tracker:org_branding' org_slug=organization.slug %}" class="btn btn-success btn-sm">
-                                            <i class="fas fa-edit"></i> Edit Branding
+                                            <i class="bi bi-pencil"></i> Edit Branding
                                         </a>
                                     {% else %}
                                         <button class="btn btn-secondary btn-sm" disabled title="Read-only access">
-                                            <i class="fas fa-lock"></i> View Only
+                                            <i class="bi bi-lock"></i> View Only
                                         </button>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
+
+                        <!-- Admin Log - All admins and owners -->
+                        {% if can_view_admin_log %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-journal-text text-primary"></i> Admin Log
+                                    </h5>
+                                    <p class="card-text text-muted">
+                                        View all transactions and activity logs
+                                    </p>
+                                    <a href="{% url 'tracker:admin_log' org_slug=organization.slug %}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-eye"></i> View Admin Log
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Import Excel - Admin only (not owner) -->
+                        {% if can_import_excel and not is_org_owner %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-file-earmark-excel text-success"></i> Import Excel
+                                    </h5>
+                                    <p class="card-text text-muted">
+                                        Import members from Excel files
+                                    </p>
+                                    <a href="{% url 'tracker:import_excel' org_slug=organization.slug %}" class="btn btn-success btn-sm">
+                                        <i class="bi bi-file-earmark-excel"></i> Import
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <!-- Staff Management -->
                         <div class="col-md-6 mb-3">
                             <div class="card border-0 bg-light {% if is_org_viewer %}opacity-75{% endif %}">
                                 <div class="card-body">
                                     <h5 class="card-title">
-                                        <i class="fas fa-users-cog text-info"></i> Staff Management
+                                        <i class="bi bi-people text-info"></i> Staff Management
                                     </h5>
                                     <p class="card-text text-muted">
                                         {% if is_org_viewer %}
@@ -351,37 +391,18 @@
                                     </p>
                                     {% if can_manage_staff %}
                                         <a href="{% url 'tracker:org_staff_management' org_slug=organization.slug %}" class="btn btn-info btn-sm">
-                                            <i class="fas fa-edit"></i> Manage Staff
+                                            <i class="bi bi-pencil"></i> Manage Staff
                                         </a>
                                     {% else %}
                                         <button class="btn btn-secondary btn-sm" disabled title="Read-only access">
-                                            <i class="fas fa-lock"></i> View Only
+                                            <i class="bi bi-lock"></i> View Only
                                         </button>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Organization Info -->
-                        <div class="col-md-6 mb-3">
-                            <div class="card border-0 bg-light">
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        <i class="fas fa-info-circle text-warning"></i> Organization Info
-                                    </h5>
-                                    <p class="card-text text-muted">
-                                        <strong>Name:</strong> {{ organization.name }}<br>
-                                        <strong>Slug:</strong> {{ organization.slug }}<br>
-                                        <strong>Status:</strong> 
-                                        {% if organization.is_active %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% else %}
-                                            <span class="badge bg-danger">Inactive</span>
-                                        {% endif %}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                        
                     </div>
                 </div>
             </div>

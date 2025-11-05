@@ -26,21 +26,52 @@
     {% csrf_token %}
 
     <div class="form-group">
-        <label for="import_file">Select Excel File</label>
+        <label for="id_excel_file">Select Excel File</label>
         <input 
             type="file" 
-            id="import_file" 
-            name="import_file" 
+            id="id_excel_file" 
+            name="excel_file" 
             accept=".xlsx,.xls,.csv"
+            class="form-control"
         >
-        <small>Supported formats: Excel (.xlsx, .xls) or CSV</small>
+        <small class="form-text text-muted">
+            Supported formats: Excel (.xlsx, .xls) or CSV.<br>
+            Columns should be: Name (required), Pledge (optional), Paid (optional), Phone, Email, Course, Year
+        </small>
+    </div>
+
+    <div class="form-group">
+        <label for="id_default_pledge">Default Pledge Amount</label>
+        <input 
+            type="number" 
+            id="id_default_pledge" 
+            name="default_pledge" 
+            value="70000.00" 
+            step="0.01" 
+            min="0"
+            class="form-control"
+        >
+        <small class="form-text text-muted">Used when pledge amount is missing in Excel file</small>
+    </div>
+
+    <div class="form-check">
+        <input 
+            type="checkbox" 
+            id="id_update_existing" 
+            name="update_existing" 
+            class="form-check-input"
+        >
+        <label for="id_update_existing" class="form-check-label">
+            Update existing members
+        </label>
+        <small class="form-text text-muted">If checked, members with the same name will be updated instead of skipped</small>
     </div>
 
     <div class="button-group">
         <button type="submit" class="btn-action btn-next" id="importBtn">
             <i class="bi bi-upload me-1"></i>Import Members
         </button>
-        <button type="button" class="btn-action btn-skip" onclick="skipImport()">
+        <button type="submit" name="skip" value="skip" class="btn-action btn-skip">
             <i class="bi bi-skip-forward me-1"></i>Skip & Go to Dashboard
         </button>
     </div>
@@ -56,14 +87,15 @@
 
 {% block extra_js %}
 <script>
-    function skipImport() {
-        // Redirect to dashboard
-        window.location.href = "{% url 'tracker:dashboard' org_slug=organization.slug %}";
-    }
-
     document.getElementById('importForm').addEventListener('submit', function(e) {
-        const fileInput = document.getElementById('import_file');
+        const fileInput = document.getElementById('id_excel_file');
         
+        // If it's the skip button, don't validate file
+        if (e.submitter && e.submitter.name === 'skip') {
+            return; // Allow form submission for skip
+        }
+        
+        // For import, validate file
         if (!fileInput.files.length) {
             e.preventDefault();
             alert('Please select a file to import');

@@ -10,8 +10,54 @@ A comprehensive financial management system for committees and organizations, bu
 - **Transaction Tracking**: Record and monitor all financial transactions
 - **Excel Import/Export**: Bulk import members and export data to Excel/PDF
 - **Admin Dashboard**: Comprehensive admin panel with statistics
+- **Google Authentication**: Sign up and login with Google OAuth2
 - **Progressive Web App**: Installable PWA for mobile devices
 - **Responsive Design**: Works perfectly on all devices
+
+## 🔐 Google Authentication
+
+### Features Implemented
+
+- **Google Sign-up**: New users can create accounts using Google OAuth
+- **Google Login**: Existing users can authenticate with Google or traditional credentials
+- **Staff Onboarding**: Admin-created staff members complete profile on first login
+- **Firebase Integration**: Firebase authentication alongside Django auth
+- **Access Control**: Only organization members can access the system
+
+### Configuration
+
+Add these environment variables to your `.env` file:
+
+```bash
+# Google OAuth2 Configuration (Required)
+GOOGLE_CLIENT_ID=your-google-oauth2-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth2-client-secret
+
+# Firebase Configuration (Required)
+FIREBASE_SERVICE_ACCOUNT_KEY={"type": "service_account", "project_id": "your-firebase-project-id", ...}
+```
+
+### Google Cloud Console Setup
+
+1. Create OAuth 2.0 credentials in Google Cloud Console
+2. Enable Google+ API
+3. Add authorized redirect URIs:
+   - Development: `http://localhost:8000/accounts/google/login/callback/`
+   - Production: `https://yourdomain.com/accounts/google/login/callback/`
+
+### Firebase Setup
+
+1. Create Firebase project
+2. Enable Authentication with Google provider
+3. Generate service account key (JSON format)
+4. Add JSON content to `FIREBASE_SERVICE_ACCOUNT_KEY`
+
+### Testing Authentication
+
+- **Google Sign-up**: Click "Continue with Google" on signup page
+- **Google Login**: Use Google button on login page
+- **Staff Onboarding**: Admin-created users are prompted to complete profile
+- **Access Control**: Non-organization emails are denied access
 
 ## 🛠️ Production Deployment
 

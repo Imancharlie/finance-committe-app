@@ -149,3 +149,17 @@ def org_owner_required(view_func):
             return HttpResponseForbidden("Only organization owners can perform this action.")
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def bossin_admin_required(view_func):
+    """
+    Decorator to ensure user is a superuser (Bossin admin).
+    Used for Bossin Admin Portal - platform-wide administration.
+    """
+    @wraps(view_func)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_superuser:
+            return HttpResponseForbidden("Only Bossin administrators can access this page.")
+        return view_func(request, *args, **kwargs)
+    return wrapper

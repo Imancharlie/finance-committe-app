@@ -9,13 +9,13 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1 class="mb-2">
-                <i class="fas fa-user-edit"></i> Edit Staff Member
+                <i class="bi bi-person-gear"></i> Edit Staff Member
             </h1>
             <p class="text-muted">Update role and status for {{ org_user.user.username }}</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{% url 'tracker:org_staff_management' org_slug=organization.slug %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Staff
+                <i class="bi bi-arrow-left"></i> Back to Staff
             </a>
         </div>
     </div>
@@ -26,7 +26,7 @@
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-user-check"></i> Update Staff Member
+                        <i class="bi bi-person-check"></i> Update Staff Member
                     </h5>
                 </div>
                 <div class="card-body">
@@ -62,10 +62,10 @@
                         <!-- Submit Buttons -->
                         <div class="mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Save Changes
+                                <i class="bi bi-save"></i> Save Changes
                             </button>
                             <a href="{% url 'tracker:org_staff_management' org_slug=organization.slug %}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                                <i class="bi bi-x"></i> Cancel
                             </a>
                         </div>
                     </form>
@@ -78,7 +78,7 @@
             <div class="card mb-3">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-user"></i> User Information
+                        <i class="bi bi-person"></i> User Information
                     </h5>
                 </div>
                 <div class="card-body">
@@ -108,31 +108,31 @@
             <div class="card">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0">
-                        <i class="fas fa-info-circle"></i> Role Reference
+                        <i class="bi bi-info-circle"></i> Role Reference
                     </h5>
                 </div>
                 <div class="card-body small">
                     <p class="mb-2">
                         <strong class="text-danger">
-                            <i class="fas fa-crown"></i> Owner
+                            <i class="bi bi-star"></i> Owner
                         </strong><br>
                         Full access to all organization settings and staff management
                     </p>
                     <p class="mb-2">
                         <strong class="text-warning">
-                            <i class="fas fa-shield-alt"></i> Admin
+                            <i class="bi bi-shield"></i> Admin
                         </strong><br>
                         Can manage staff and view reports
                     </p>
                     <p class="mb-2">
                         <strong class="text-info">
-                            <i class="fas fa-user-tie"></i> Staff
+                            <i class="bi bi-person"></i> Staff
                         </strong><br>
                         Can record transactions and manage members
                     </p>
                     <p class="mb-0">
                         <strong class="text-secondary">
-                            <i class="fas fa-eye"></i> Viewer
+                            <i class="bi bi-eye"></i> Viewer
                         </strong><br>
                         Read-only access to organization data
                     </p>

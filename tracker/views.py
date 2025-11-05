@@ -15,7 +15,7 @@ from io import BytesIO
 from django.db import connection
 from django.utils import timezone
 
-from .models import Member, Transaction, OrganizationUser, Organization, OrganizationTheme, MemberEditLog
+from .models import Member, Transaction, OrganizationUser, Organization, OrganizationTheme, MemberEditLog, PaymentRequest, SystemSettings
 from .forms import CustomLoginForm, MemberForm, QuickMemberForm, TransactionForm, MemberUpdateForm, ExcelImportForm, SignUpForm, AddOrganizationUserForm
 # Removed Django's staff_member_required - using org_staff_required instead
 from django.contrib.auth.models import User
@@ -34,6 +34,46 @@ def landing_view(request):
     return render(request, 'landing.html')
 
 
+def help_center(request, org_slug):
+    """Tenant Help Center - FAQs and guides for the current organization (non-technical)."""
+    organization = get_object_or_404(Organization, slug=org_slug, is_active=True)
+    faqs = [
+        {
+            'q': 'How do I add members?',
+            'a': 'If you have permission, go to Admin > Staff Management. Owners may also use Import (Excel) if enabled.'
+        },
+        {
+            'q': 'How do I record daily collections?',
+            'a': 'Open Daily Collection from the navbar, search a member, enter amount, and save.'
+        },
+        {
+            'q': 'How do I view reports?',
+            'a': 'Use Admin Log to see transactions. Export to Excel/PDF from the Admin menu if allowed.'
+        },
+        {
+            'q': 'I cannot access Admin features',
+            'a': 'Contact your organization owner to grant you the required role.'
+        },
+    ]
+
+    # Support contacts from SystemSettings with fallbacks
+    settings_obj = SystemSettings.get_settings() if hasattr(SystemSettings, 'get_settings') else None
+    support_email = (settings_obj.support_email if settings_obj and settings_obj.support_email else 'KodinSoftwares@gmail.com')
+    support_phone = (settings_obj.support_phone if settings_obj and settings_obj.support_phone else '0614021404')
+
+    # Build tel and WhatsApp links (digits only for wa.me)
+    import re
+    phone_digits = re.sub(r'\D+', '', support_phone or '')
+    whatsapp_link = f"https://wa.me/{phone_digits}" if phone_digits else None
+
+    return render(request, 'tracker/help_center.html', {
+        'organization': organization,
+        'faqs': faqs,
+        'support_email': support_email,
+        'support_phone': support_phone,
+        'whatsapp_link': whatsapp_link,
+    })
+
 def signup_view(request):
     """User registration and organization creation"""
     if request.user.is_authenticated:
@@ -42,6 +82,10 @@ def signup_view(request):
     if request.method == 'POST':
         form = SignUpForm(request.POST)
         if form.is_valid():
+            # Enforce Terms & Conditions acceptance
+            if not request.POST.get('accept_terms'):
+                messages.error(request, 'You must accept the Terms & Conditions to create an account.')
+                return render(request, 'tracker/signup.html', {'form': form})
             try:
                 # Create user
                 user = User.objects.create_user(
@@ -67,6 +111,10 @@ def signup_view(request):
                     description=form.cleaned_data['organization_description'],
                     is_active=True
                 )
+                # Start default free trial status
+                organization.trial_started_at = timezone.now()
+                organization.subscription_status = 'FREE_TRIAL'
+                organization.save(update_fields=['trial_started_at', 'subscription_status'])
                 
                 # Create organization theme with defaults
                 OrganizationTheme.objects.create(
@@ -90,8 +138,14 @@ def signup_view(request):
                     is_active=True
                 )
                 
-                # Log the user in
-                login(request, user)
+                # Log the user in (handle multiple auth backends)
+                auth_user = authenticate(request, username=form.cleaned_data['username'], password=form.cleaned_data['password'])
+                if auth_user is not None:
+                    login(request, auth_user)
+                else:
+                    from django.conf import settings
+                    # Fallback: explicitly specify a backend
+                    login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0])
                 messages.success(request, f'Welcome {user.first_name}! Your organization "{organization.name}" has been created.')
                 
                 # Redirect to onboarding flow
@@ -103,6 +157,11 @@ def signup_view(request):
         form = SignUpForm()
     
     return render(request, 'tracker/signup.html', {'form': form})
+
+
+def terms_view(request):
+    """Public Terms & Conditions page."""
+    return render(request, 'terms.html')
 
 
 # Helper function to redirect to dashboard with org_slug
@@ -1313,7 +1372,16 @@ def member_detail(request, member_id, org_slug=None):
         member = get_object_or_404(Member, id=member_id, organization=tenant)
         transactions = member.transaction_set.all().order_by('-date', '-id')
 
+        # Check if user can add payments (admin or owner only)
+        from .permissions import is_org_admin
+        can_add_payment = is_org_admin(request.user, tenant)  # is_org_admin already includes owner
+
         if request.method == 'POST':
+            # Check permission before processing POST
+            if not can_add_payment:
+                messages.error(request, 'You do not have permission to add payments.')
+                return redirect('tracker:member_detail', member_id=member.id, org_slug=tenant.slug)
+            
             transaction_form = TransactionForm(request.POST)
             if transaction_form.is_valid():
                 try:
@@ -1334,20 +1402,24 @@ def member_detail(request, member_id, org_slug=None):
                             transaction.date = date.today()
                         # Save the transaction
                         transaction.save()
-                        # Update member's paid_total
+                        # Update member's paid_total - use select_for_update to prevent race conditions
                         try:
-                            # Recalculate paid_total from all transactions
-                            total_paid = member.transaction_set.aggregate(
-                                total=Sum('amount')
-                            )['total'] or Decimal('0.00')
-                            member.paid_total = total_paid
-                            member.save()
+                            from django.db import transaction as db_transaction
+                            with db_transaction.atomic():
+                                # Lock the member row for update
+                                member = Member.objects.select_for_update().get(pk=member.pk)
+                                # Recalculate paid_total from all transactions
+                                total_paid = member.transaction_set.aggregate(
+                                    total=Sum('amount')
+                                )['total'] or Decimal('0.00')
+                                member.paid_total = total_paid
+                                member.save(update_fields=['paid_total'])
                             messages.success(request, f'Payment of TZS {amount:,.0f} recorded successfully!')
-                            return redirect('tracker:member_detail', member_id=member.id)
+                            return redirect('tracker:member_detail', member_id=member.id, org_slug=tenant.slug)
                         except Exception as e:
                             # If updating paid_total fails, still save the transaction
-                            messages.warning(request, f'Payment recorded but there was an issue updating member totals. Please contact administrator.')
-                            return redirect('tracker:member_detail', member_id=member.id)
+                            messages.warning(request, f'Payment recorded but there was an issue updating member totals. Please contact administrator. Error: {str(e)}')
+                            return redirect('tracker:member_detail', member_id=member.id, org_slug=tenant.slug)
                 except Exception as e:
                     messages.error(request, f'Error recording payment: {str(e)}')
                     transaction_form = TransactionForm(request.POST)  # Re-populate form
@@ -1366,6 +1438,7 @@ def member_detail(request, member_id, org_slug=None):
             'transaction_form': transaction_form,
             'member_form': MemberForm(instance=member),
             'can_edit': request.user.is_staff,  # Simple check
+            'can_add_payment': can_add_payment,  # Check for admin/owner
         }
         return render(request, 'tracker/member_detail.html', context)
 
@@ -2385,6 +2458,7 @@ def record_daily_payment_ajax(request, org_slug=None):
 
 from .permissions import org_admin_required
 from .forms import OrganizationSettingsForm, OrganizationThemeForm, OrganizationUserForm, AddOrganizationUserForm
+from .models import PaymentRequest
 
 @org_admin_required
 def org_admin_dashboard(request, org_slug=None):
@@ -2457,6 +2531,80 @@ def org_branding(request, org_slug=None):
     }
     
     return render(request, 'tracker/org_admin/branding.html', context)
+
+
+@org_admin_required
+def org_billing(request, org_slug=None):
+    """Owner/Admin billing page inside admin area."""
+    tenant = request.tenant
+    category = tenant.category
+    category_discount = 50 if category == 'religious' else 35
+    requests_qs = PaymentRequest.objects.filter(organization=tenant).order_by('-created_at')[:20]
+    # Build status - check subscription_status first, then dates
+    now = timezone.now()
+    last_approved = PaymentRequest.objects.filter(organization=tenant, status='approved', is_trial=False).order_by('-created_at').first()
+    
+    # Check subscription status first - use subscription_status field as primary source
+    if tenant.subscription_status == 'SUBSCRIBED':
+        # Check if subscription is still active (not expired)
+        if tenant.subscription_expires_at:
+            active_sub = tenant.subscription_expires_at > now
+            if active_sub:
+                status_label = 'Subscribed'
+                started_str = last_approved.created_at.strftime('%Y-%m-%d %H:%M') if last_approved else 'Unknown'
+                months_str = str(last_approved.months) if last_approved else '—'
+                amount_str = f"{last_approved.amount_tzs} TZS" if last_approved else '—'
+                days_left = (tenant.subscription_expires_at - now).days
+                status_lines = [
+                    f"Started: {started_str}",
+                    f"Duration: {months_str} month(s) | Amount: {amount_str}",
+                    f"Ends: {tenant.subscription_expires_at.strftime('%Y-%m-%d %H:%M')} ({days_left} days left)"
+                ]
+            else:
+                # Status is SUBSCRIBED but expired
+                status_label = 'Not Subscribed'
+                status_lines = [
+                    f"Subscription expired: {tenant.subscription_expires_at.strftime('%Y-%m-%d %H:%M')}",
+                    'Please submit a new subscription request.'
+                ]
+        else:
+            # Status is SUBSCRIBED but expiration date is missing - this shouldn't happen
+            # But we'll show Subscribed status anyway since that's what the database says
+            status_label = 'Subscribed'
+            status_lines = [
+                'Subscription active (expiration date pending update)',
+                'Please contact admin if this persists.'
+            ]
+    elif tenant.subscription_status == 'FREE_TRIAL':
+        # Check if trial is still active
+        trial_active = bool(tenant.trial_started_at and (tenant.trial_started_at + timezone.timedelta(days=7) > now))
+        if trial_active:
+            status_label = 'Trial'
+            trial_end = tenant.trial_started_at + timezone.timedelta(days=7)
+            days_left = (trial_end - now).days
+            status_lines = [
+                f"Trial ends: {trial_end.strftime('%Y-%m-%d %H:%M')} ({days_left} days left)"
+            ]
+        else:
+            status_label = 'Not Subscribed'
+            status_lines = [
+                'Trial has expired. Please submit a subscription request.'
+            ]
+    else:
+        # NOT_SUBSCRIBED
+        status_label = 'Not Subscribed'
+        status_lines = [
+            'No active subscription. Please submit a subscription request.'
+        ]
+    context = {
+        'organization': tenant,
+        'requests': requests_qs,
+        'base_price': 19800,
+        'category_discount': category_discount,
+        'status_label': status_label,
+        'status_lines': status_lines,
+    }
+    return render(request, 'tracker/admin/billing.html', context)
 
 
 @org_admin_required
@@ -2654,7 +2802,7 @@ def onboarding_financial(request, org_slug):
         'organization': organization,
         'theme': theme,
         'step': 1,
-        'total_steps': 4
+        'total_steps': 5
     }
     return render(request, 'tracker/onboarding/financial.html', context)
 
@@ -2671,11 +2819,15 @@ def onboarding_branding(request, org_slug):
     
     if request.method == 'POST':
         try:
-            theme.primary_color = request.POST.get('primary_color', theme.primary_color)
-            theme.secondary_color = request.POST.get('secondary_color', theme.secondary_color)
-            theme.success_color = request.POST.get('success_color', theme.success_color)
-            theme.warning_color = request.POST.get('warning_color', theme.warning_color)
-            theme.danger_color = request.POST.get('danger_color', theme.danger_color)
+            # Category selection (auto-sets theme defaults)
+            selected_category = request.POST.get('category')
+            if selected_category and selected_category in dict(Organization.CATEGORY_CHOICES):
+                organization.category = selected_category
+                organization.save(update_fields=['category'])
+                # Apply default colors based on category
+                from .models import apply_category_default_theme
+                apply_category_default_theme(theme, selected_category)
+            
             theme.navbar_title = request.POST.get('navbar_title', theme.navbar_title)
             theme.watermark_text = request.POST.get('watermark_text', theme.watermark_text)
             
@@ -2693,8 +2845,9 @@ def onboarding_branding(request, org_slug):
     context = {
         'organization': organization,
         'theme': theme,
+        'category_choices': Organization.CATEGORY_CHOICES,
         'step': 2,
-        'total_steps': 4
+        'total_steps': 5
     }
     return render(request, 'tracker/onboarding/branding.html', context)
 
@@ -2747,7 +2900,7 @@ def onboarding_staff(request, org_slug):
         'organization': organization,
         'staff_members': staff_members,
         'step': 3,
-        'total_steps': 4
+        'total_steps': 5
     }
     return render(request, 'tracker/onboarding/staff.html', context)
 
@@ -2762,15 +2915,473 @@ def onboarding_import(request, org_slug):
         return redirect('tracker:landing')
     
     if request.method == 'POST':
-        # Skip import and go to dashboard
-        return redirect('tracker:dashboard', org_slug=org_slug)
+        # Check if user clicked "Skip & Go to Dashboard"
+        if 'skip' in request.POST:
+            return redirect('tracker:onboarding_subscription', org_slug=org_slug)
+        
+        # Handle file import
+        form = ExcelImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            excel_file = form.cleaned_data['excel_file']
+            update_existing = form.cleaned_data['update_existing']
+            default_pledge = form.cleaned_data['default_pledge']
+
+            try:
+                workbook = openpyxl.load_workbook(BytesIO(excel_file.read()))
+                sheet = workbook.active
+
+                created_count = 0
+                updated_count = 0
+                transaction_count = 0
+                errors = []
+
+                for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                    try:
+                        if not row[0]:
+                            continue  # Skip rows without a name
+
+                        name = str(row[0]).strip()
+                        pledge = row[1]
+                        paid = row[2] if len(row) > 2 else None
+                        phone = str(row[3]).strip() if len(row) > 3 and row[3] else ''
+                        email = str(row[4]).strip() if len(row) > 4 and row[4] else ''
+                        course = str(row[5]).strip() if len(row) > 5 and row[5] else ''
+                        year = str(row[6]).strip() if len(row) > 6 and row[6] else ''
+
+                        # Pledge
+                        try:
+                            pledge = Decimal(str(pledge)) if pledge else default_pledge
+                        except InvalidOperation:
+                            pledge = default_pledge
+                            errors.append(f"Row {idx}: Invalid pledge, using default for '{name}'")
+
+                        # Paid
+                        try:
+                            paid = Decimal(str(paid)) if paid else Decimal('0.00')
+                        except InvalidOperation:
+                            paid = Decimal('0.00')
+                            errors.append(f"Row {idx}: Invalid paid value for '{name}', using 0.00")
+
+                        member_created = False
+                        if update_existing:
+                            member, member_created = Member.objects.update_or_create(
+                                organization=organization,
+                                name=name,
+                                defaults={
+                                    'pledge': pledge,
+                                    'phone': phone or None,
+                                    'email': email or None,
+                                    'course': course or None,
+                                    'year': year or None,
+                                }
+                            )
+                        else:
+                            member = Member.objects.filter(organization=organization, name=name).first()
+                            if not member:
+                                member = Member.objects.create(
+                                    organization=organization,
+                                    name=name,
+                                    pledge=pledge,
+                                    phone=phone or None,
+                                    email=email or None,
+                                    course=course or None,
+                                    year=year or None,
+                                )
+                                member_created = True
+                            else:
+                                errors.append(f"Row {idx}: Member '{name}' already exists and update is off.")
+                                continue
+
+                        if member_created:
+                            created_count += 1
+                        else:
+                            updated_count += 1
+
+                        # Transaction
+                        if paid > 0:
+                            existing_txn = Transaction.objects.filter(
+                                organization=organization,
+                                member=member,
+                                date=date.today(),
+                                added_by=request.user,
+                                note__icontains="Imported via Excel"
+                            ).first()
+
+                            if existing_txn:
+                                # Update the amount if different
+                                if existing_txn.amount != paid:
+                                    existing_txn.amount = paid
+                                    existing_txn.note = f"Updated via Excel on {date.today().isoformat()}"
+                                    existing_txn.save()
+                                    transaction_count += 1
+                            else:
+                                # Create new transaction
+                                Transaction.objects.create(
+                                    organization=organization,
+                                    member=member,
+                                    amount=paid,
+                                    date=date.today(),
+                                    added_by=request.user,
+                                    note=f"Imported via Excel on {date.today().isoformat()}"
+                                )
+                                transaction_count += 1
+
+                    except Exception as e:
+                        errors.append(f"Row {idx}: Error processing member '{row[0]}' - {str(e)}")
+
+                # Show success messages
+                if created_count:
+                    messages.success(request, f"✅ Created {created_count} new members.")
+                if updated_count:
+                    messages.info(request, f"🔄 Updated {updated_count} existing members.")
+                if transaction_count:
+                    messages.success(request, f"💰 Recorded {transaction_count} payments.")
+
+                # Show errors if any
+                if errors:
+                    for err in errors[:5]:
+                        messages.warning(request, f"⚠️ {err}")
+                    if len(errors) > 5:
+                        messages.warning(request, f"...and {len(errors) - 5} more issues.")
+
+                # Redirect to subscription after successful import
+                return redirect('tracker:onboarding_subscription', org_slug=org_slug)
+
+            except Exception as e:
+                messages.error(request, f"📄 Excel reading error: {str(e)}")
+
+        else:
+            messages.error(request, "⚠️ Invalid form submission.")
+    else:
+        form = ExcelImportForm()
     
     context = {
         'organization': organization,
         'step': 4,
-        'total_steps': 4
+        'total_steps': 5,
+        'form': form
     }
     return render(request, 'tracker/onboarding/import.html', context)
+
+
+@login_required
+def onboarding_subscription(request, org_slug):
+    """Step 5: Subscription & Payment (manual)"""
+    try:
+        organization = Organization.objects.get(slug=org_slug)
+    except Organization.DoesNotExist:
+        messages.error(request, 'Organization not found.')
+        return redirect('tracker:landing')
+
+    BASE_PRICE = Decimal('19800.00')
+    category = organization.category
+    category_discount = 50 if category == 'religious' else 35
+
+    # Check if there's a pending payment request (only truly pending)
+    pending_request = PaymentRequest.objects.filter(
+        organization=organization,
+        submitted_by=request.user,
+        status='pending'
+    ).order_by('-created_at').first()
+    
+    # Get the most recent declined request (if any) for prominent display
+    recent_declined = PaymentRequest.objects.filter(
+        organization=organization,
+        submitted_by=request.user,
+        status='declined'
+    ).order_by('-created_at').first() if not pending_request else None
+    
+    # Get all payment requests for this organization (for history display)
+    all_requests = PaymentRequest.objects.filter(
+        organization=organization,
+        submitted_by=request.user
+    ).order_by('-created_at')[:10]  # Show last 10 requests
+    
+    # Check if there are any declined requests (for highlighting)
+    has_declined = PaymentRequest.objects.filter(
+        organization=organization,
+        submitted_by=request.user,
+        status='declined'
+    ).exists()
+
+    # Check if this organization was new when they submitted their request
+    # This is determined by checking if there were NO payment requests before the current pending one
+    # OR by checking session flag set during submission
+    was_new_on_submit = False
+    if pending_request:
+        # Count how many requests existed BEFORE this pending one
+        requests_before = PaymentRequest.objects.filter(
+            organization=organization,
+            created_at__lt=pending_request.created_at
+        ).count()
+        was_new_on_submit = (requests_before == 0)
+    
+    # Also check session flag (set during POST submission)
+    if 'was_new_org_on_submit' in request.session:
+        was_new_on_submit = request.session.pop('was_new_org_on_submit', False)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'trial':
+            PaymentRequest.objects.create(
+                organization=organization,
+                submitted_by=request.user,
+                months=0,
+                is_trial=True,
+                amount_tzs=Decimal('0.00'),
+                discount_percent=0,
+                category_snapshot=category,
+                reference_note=None,
+            )
+            # Mark trial start and status
+            if not organization.trial_started_at:
+                organization.trial_started_at = timezone.now()
+                organization.subscription_status = 'FREE_TRIAL'
+                organization.save(update_fields=['trial_started_at', 'subscription_status'])
+            messages.success(request, 'Free trial activated for 7 days. Enjoy!')
+            return redirect('tracker:dashboard', org_slug=org_slug)
+
+        # Paid subscription
+        months = int(request.POST.get('months') or '1')
+        months = max(1, min(12, months))
+        first_month_discount = Decimal(str(category_discount))
+        # Discount applies to first month only
+        first_month_price = BASE_PRICE * (Decimal('100') - first_month_discount) / Decimal('100')
+        total_amount = first_month_price + (BASE_PRICE * (months - 1))
+
+        # Collect billing fields
+        reference_note = (request.POST.get('payment_reference') or request.POST.get('reference_note') or '').strip() or None
+        payment_method = request.POST.get('payment_method') or None
+        amount_sent_raw = request.POST.get('amount_sent') or None
+        amount_sent = None
+        try:
+            if amount_sent_raw is not None and amount_sent_raw != '':
+                amount_sent = Decimal(str(amount_sent_raw))
+        except Exception:
+            amount_sent = None
+
+        # Check if this is a new organization (no payment requests ever existed BEFORE creating this one)
+        was_new_org = not PaymentRequest.objects.filter(organization=organization).exists()
+        
+        # Create payment request
+        payment_request = PaymentRequest.objects.create(
+            organization=organization,
+            submitted_by=request.user,
+            months=months,
+            is_trial=False,
+            amount_tzs=total_amount.quantize(Decimal('1.00')),
+            discount_percent=int(category_discount),
+            category_snapshot=category,
+            reference_note=reference_note,
+            payment_method=payment_method,
+            amount_sent=amount_sent,
+        )
+        
+        # For NEW organizations (no previous payment requests): activate free trial while payment is being processed
+        # This allows them to access the dashboard immediately during onboarding
+        if was_new_org and not organization.trial_started_at:
+            organization.trial_started_at = timezone.now()
+            organization.subscription_status = 'FREE_TRIAL'
+            organization.save(update_fields=['trial_started_at', 'subscription_status'])
+            messages.success(request, 'Your subscription request has been submitted! We\'ve activated a free 7-day trial while we process your payment. You\'ll get full access once approved.')
+            # Auto-redirect new users to dashboard after activating free trial
+            return redirect('tracker:dashboard', org_slug=org_slug)
+        else:
+            messages.success(request, 'Subscription request submitted successfully! Admin will confirm after payment verification.')
+            # Auto-redirect to dashboard after submitting payment request
+            return redirect('tracker:dashboard', org_slug=org_slug)
+
+    context = {
+        'organization': organization,
+        'step': 5,
+        'total_steps': 5,
+        'base_price': 19800,
+        'category_discount': category_discount,
+        'pay_number': '68256127',
+        'pending_request': pending_request,
+        'recent_declined': recent_declined,
+        'all_requests': all_requests,
+        'has_declined': has_declined,
+        'was_new_on_submit': was_new_on_submit,
+        'whatsapp_number': '+255614021404',
+        'support_email': 'kodinsoftwares@gmail.com',
+    }
+    return render(request, 'tracker/onboarding/subscription.html', context)
+
+@login_required
+def subscription_renewal(request, org_slug):
+    """Subscription renewal page for expired subscriptions (no free trial option)"""
+    try:
+        organization = Organization.objects.get(slug=org_slug)
+    except Organization.DoesNotExist:
+        messages.error(request, 'Organization not found.')
+        return redirect('tracker:landing')
+
+    BASE_PRICE = Decimal('19800.00')
+    category = organization.category
+    category_discount = 50 if category == 'religious' else 35
+
+    # Check if organization is already subscribed and active
+    now = timezone.now()
+    is_subscribed = (
+        organization.subscription_status == 'SUBSCRIBED' and 
+        organization.subscription_expires_at and 
+        organization.subscription_expires_at > now
+    )
+    
+    # If already subscribed, check for recently approved request and redirect to dashboard
+    if is_subscribed:
+        # Check if there's a recently approved request (within last 5 minutes)
+        recent_approved = PaymentRequest.objects.filter(
+            organization=organization,
+            submitted_by=request.user,
+            status='approved',
+            is_trial=False,
+            updated_at__gte=now - timezone.timedelta(minutes=5)
+        ).order_by('-updated_at').first()
+        
+        if recent_approved:
+            # Recently approved - show success message
+            days_left = (organization.subscription_expires_at - now).days
+            messages.success(
+                request, 
+                f'Your payment request has been approved! Your subscription is active until {organization.subscription_expires_at.strftime("%B %d, %Y")} ({days_left} days remaining).'
+            )
+        else:
+            # Already subscribed but not recently approved - show info message
+            days_left = (organization.subscription_expires_at - now).days
+            messages.info(
+                request, 
+                f'Your subscription is active until {organization.subscription_expires_at.strftime("%B %d, %Y")} ({days_left} days remaining).'
+            )
+        
+        # Redirect to dashboard
+        return redirect('tracker:dashboard', org_slug=org_slug)
+
+    # Check if there's a pending payment request
+    pending_request = PaymentRequest.objects.filter(
+        organization=organization,
+        submitted_by=request.user,
+        status='pending'
+    ).order_by('-created_at').first()
+    
+    # Get the most recent declined request (if any) for prominent display
+    recent_declined = PaymentRequest.objects.filter(
+        organization=organization,
+        submitted_by=request.user,
+        status='declined'
+    ).order_by('-created_at').first() if not pending_request else None
+    
+    # Get all payment requests for this organization (for history display)
+    all_requests = PaymentRequest.objects.filter(
+        organization=organization,
+        submitted_by=request.user
+    ).order_by('-created_at')[:10]
+
+    if request.method == 'POST':
+        # Only paid subscription (no free trial option)
+        months = int(request.POST.get('months') or '1')
+        months = max(1, min(12, months))
+        first_month_discount = Decimal(str(category_discount))
+        first_month_price = BASE_PRICE * (Decimal('100') - first_month_discount) / Decimal('100')
+        total_amount = first_month_price + (BASE_PRICE * (months - 1))
+
+        # Collect billing fields
+        reference_note = (request.POST.get('payment_reference') or request.POST.get('reference_note') or '').strip() or None
+        payment_method = request.POST.get('payment_method') or None
+        amount_sent_raw = request.POST.get('amount_sent') or None
+        amount_sent = None
+        try:
+            if amount_sent_raw is not None and amount_sent_raw != '':
+                amount_sent = Decimal(str(amount_sent_raw))
+        except Exception:
+            amount_sent = None
+
+        # Create payment request
+        payment_request = PaymentRequest.objects.create(
+            organization=organization,
+            submitted_by=request.user,
+            months=months,
+            is_trial=False,
+            amount_tzs=total_amount.quantize(Decimal('1.00')),
+            discount_percent=int(category_discount),
+            category_snapshot=category,
+            reference_note=reference_note,
+            payment_method=payment_method,
+            amount_sent=amount_sent,
+        )
+        
+        messages.success(request, 'Subscription request submitted successfully! Admin will confirm after payment verification.')
+        return redirect('tracker:dashboard', org_slug=org_slug)
+
+    context = {
+        'organization': organization,
+        'base_price': 19800,
+        'category_discount': category_discount,
+        'pay_number': '68256127',
+        'pending_request': pending_request,
+        'recent_declined': recent_declined,
+        'all_requests': all_requests,
+        'whatsapp_number': '+255614021404',
+        'support_email': 'kodinsoftwares@gmail.com',
+        'is_renewal': True,  # Flag to indicate this is renewal page (not onboarding)
+    }
+    return render(request, 'tracker/subscription.html', context)
+
+@login_required
+def staff_onboarding(request, org_slug):
+    """Staff onboarding - collect email and full name for staff created by admin"""
+    try:
+        organization = Organization.objects.get(slug=org_slug)
+    except Organization.DoesNotExist:
+        messages.error(request, 'Organization not found.')
+        return redirect('tracker:landing')
+
+    # Check if user is staff and needs onboarding
+    try:
+        org_user = OrganizationUser.objects.get(user=request.user, organization=organization)
+        if org_user.role not in ['staff', 'admin']:
+            messages.error(request, 'Access denied.')
+            return redirect('tracker:dashboard', org_slug=org_slug)
+    except OrganizationUser.DoesNotExist:
+        messages.error(request, 'You are not a member of this organization.')
+        return redirect('tracker:landing')
+
+    # Check if onboarding is already completed
+    if request.user.userprofile.onboarding_completed:
+        return redirect('tracker:dashboard', org_slug=org_slug)
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+
+        errors = []
+
+        # Validate email
+        if not email:
+            errors.append('Email is required.')
+        elif User.objects.filter(email=email).exclude(id=request.user.id).exists():
+            errors.append('This email is already in use by another account.')
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            # Update user profile
+            request.user.email = email
+            request.user.userprofile.phone = phone
+            request.user.userprofile.onboarding_completed = True
+            request.user.save()
+            request.user.userprofile.save()
+
+            messages.success(request, 'Profile completed successfully! Welcome to the team.')
+            return redirect('tracker:dashboard', org_slug=org_slug)
+
+    context = {
+        'organization': organization,
+        'user': request.user,
+    }
+    return render(request, 'tracker/staff_onboarding.html', context)
 
 
 # ============================================================================

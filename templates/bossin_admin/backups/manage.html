@@ -1,0 +1,198 @@
+{% extends "bossin_admin/base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Backup Management - Bossin Admin Portal{% endblock %}
+
+{% block admin_content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><i class="bi bi-cloud-download me-2"></i>Backup Management</h1>
+        <p class="text-muted mb-0">Manage database backups and restore points</p>
+    </div>
+    <div>
+        <form method="post" action="{% url 'bossin_admin:backup_create' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-admin" onclick="return confirm('Create a new backup now?')">
+                <i class="bi bi-plus-circle"></i> Create Backup
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Backup Status -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="admin-card">
+            <h5><i class="bi bi-info-circle me-2"></i>Backup Status</h5>
+            {% if latest_backup %}
+            <div class="d-flex justify-content-between mb-2">
+                <span>Latest Backup:</span>
+                <strong>{{ latest_backup.created|date:"M d, Y H:i" }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Age:</span>
+                <span class="badge bg-{% if latest_backup.age_days < 2 %}success{% elif latest_backup.age_days < 7 %}warning{% else %}danger{% endif %}">
+                    {{ latest_backup.age_days }} day{{ latest_backup.age_days|pluralize }}
+                </span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Size:</span>
+                <strong>{{ latest_backup.size_mb|floatformat:2 }} MB</strong>
+            </div>
+            {% else %}
+            <div class="text-muted">No backups found</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="admin-card">
+            <h5><i class="bi bi-gear me-2"></i>Settings</h5>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Auto Backup:</span>
+                <span class="badge bg-{% if backup_enabled %}success{% else %}danger{% endif %}">
+                    {% if backup_enabled %}Enabled{% else %}Disabled{% endif %}
+                </span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Retention:</span>
+                <strong>{{ retention_days }} days</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="admin-card">
+            <h5><i class="bi bi-shield-check me-2"></i>Health</h5>
+            {% if latest_backup %}
+                {% if latest_backup.age_days < 2 %}
+                    <div class="text-success">
+                        <i class="bi bi-check-circle"></i> Healthy
+                    </div>
+                    <small class="text-muted">Backups are up to date</small>
+                {% elif latest_backup.age_days < 7 %}
+                    <div class="text-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Warning
+                    </div>
+                    <small class="text-muted">Backup is getting old</small>
+                {% else %}
+                    <div class="text-danger">
+                        <i class="bi bi-x-circle"></i> Critical
+                    </div>
+                    <small class="text-muted">Backup is too old</small>
+                {% endif %}
+            {% else %}
+                <div class="text-danger">
+                    <i class="bi bi-x-circle"></i> No Backups
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Backups List -->
+<div class="admin-card">
+    <h3><i class="bi bi-list-ul me-2"></i>Backup Files</h3>
+    {% if backups %}
+    <div class="table-responsive">
+        <table class="table table-hover admin-table">
+            <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th class="d-none d-md-table-cell">Created</th>
+                    <th class="d-none d-md-table-cell">Age</th>
+                    <th class="d-none d-md-table-cell">Size</th>
+                    <th class="action-column">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for backup in backups %}
+                <tr onclick="showBackupActions('{{ backup.name }}', '{{ backup.path }}')" style="cursor: pointer;">
+                    <td>
+                        <code style="font-size: 0.75rem; word-break: break-all;">{{ backup.name|truncatechars:40 }}</code>
+                        {% if backup.name|length > 40 %}
+                        <span class="text-muted">...</span>
+                        {% endif %}
+                    </td>
+                    <td class="d-none d-md-table-cell">
+                        <small>{{ backup.created|date:"M d, Y H:i" }}</small>
+                    </td>
+                    <td class="d-none d-md-table-cell">
+                        <span class="badge bg-{% if backup.age_days < 7 %}success{% elif backup.age_days < 30 %}warning{% else %}secondary{% endif %}">
+                            {{ backup.age_days }}d
+                        </span>
+                    </td>
+                    <td class="d-none d-md-table-cell">
+                        <small>{{ backup.size_mb|floatformat:2 }} MB</small>
+                    </td>
+                    <td class="action-column">
+                        <a href="{% url 'bossin_admin:backup_download' %}?backup_file={{ backup.name }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();" title="Download">
+                            <i class="bi bi-download"></i><span class="d-none d-lg-inline ms-1">Download</span>
+                        </a>
+                        <a href="{% url 'bossin_admin:backup_restore' %}?backup_path={{ backup.path }}" class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation(); return confirm('⚠️ WARNING: This will replace your current database! Continue?');" title="Restore">
+                            <i class="bi bi-arrow-clockwise"></i><span class="d-none d-lg-inline ms-1">Restore</span>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-4">
+        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p class="mt-3">No backup files found</p>
+        <p>Create your first backup to get started</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Info -->
+<div class="admin-card mt-4">
+    <h5><i class="bi bi-info-circle me-2"></i>About Backups</h5>
+    <ul class="mb-0">
+        <li>Backups are automatically compressed to save space</li>
+        <li>Backups older than {{ retention_days }} days are automatically deleted</li>
+        <li>Always download backups before restoring</li>
+        <li>Restoring will replace your current database - use with caution!</li>
+        <li><strong>Important:</strong> Stop the Django server before restoring on Windows</li>
+    </ul>
+</div>
+
+<!-- Mobile Action Modal for Backups -->
+<div class="modal fade" id="backupActionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Backup Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="backupActionContent">
+                <!-- Actions will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showBackupActions(backupName, backupPath) {
+    const modalContent = document.getElementById('backupActionContent');
+    const downloadUrl = "{% url 'bossin_admin:backup_download' %}?backup_file=" + encodeURIComponent(backupName);
+    const restoreUrl = "{% url 'bossin_admin:backup_restore' %}?backup_path=" + encodeURIComponent(backupPath);
+    
+    modalContent.innerHTML = `
+        <div class="d-grid gap-2">
+            <a href="${downloadUrl}" class="btn btn-primary">
+                <i class="bi bi-download"></i> Download Backup
+            </a>
+            <a href="${restoreUrl}" class="btn btn-warning" onclick="return confirm('⚠️ WARNING: This will replace your current database! Continue?');">
+                <i class="bi bi-arrow-clockwise"></i> Restore from Backup
+            </a>
+        </div>
+    `;
+    const modal = new bootstrap.Modal(document.getElementById('backupActionModal'));
+    modal.show();
+}
+</script>
+{% endblock %}
+
