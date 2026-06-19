@@ -1,9 +1,12 @@
 """API views for Bossin Finance mobile application."""
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from datetime import date
+from io import BytesIO
 
 from django.contrib.auth.models import User
 from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
@@ -11,6 +14,14 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
+
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
 from tracker.models import (
     Member,
@@ -783,3 +794,421 @@ class HelpInfoAPIView(APIView):
             'mpesa_account_name': settings.mpesa_account_name,
             'whatsapp_number': '+255614021404',
         })
+
+
+# =============================================================================
+# EXPORT/IMPORT ENDPOINTS
+# =============================================================================
+
+class ExportMembersExcelAPIView(TenantMixin, APIView):
+    """Export members data to Excel format."""
+    permission_classes = [IsAuthenticated, IsOrgMember]
+
+    def get(self, request, org_slug):
+        search = request.query_params.get('search', '')
+        filter_status = request.query_params.get('filter', '')
+
+        # Get members with filtering
+        members_qs = Member.objects.filter(
+            organization=request.tenant, is_active=True,
+        ).order_by('name')
+        members_qs = filter_members_queryset(members_qs, search, filter_status)
+
+        # Create workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Members Data"
+
+        # Add organization header
+        ws.merge_cells('A1:J1')
+        org_header = ws['A1']
+        org_header.value = f"{request.tenant.name} - Members Report"
+        org_header.font = Font(bold=True, size=14, color="FFFFFF")
+        org_header.fill = PatternFill(start_color="2c3e50", end_color="2c3e50", fill_type="solid")
+        org_header.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 25
+
+        # Add export date
+        ws.merge_cells('A2:J2')
+        date_cell = ws['A2']
+        date_cell.value = f"Exported on {date.today().strftime('%B %d, %Y')}"
+        date_cell.font = Font(italic=True, size=10, color="666666")
+        date_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[2].height = 15
+
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        center_alignment = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = ['Name', 'Pledge (TZS)', 'Paid (TZS)', 'Remaining (TZS)', 'Phone', 'Email', 'Course', 'Year', 'Status', 'Created Date']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=4, column=col_num)
+            cell.value = header
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = border
+            cell.alignment = center_alignment
+
+        # Add data
+        for row_num, member in enumerate(members_qs, 5):
+            ws.cell(row=row_num, column=1, value=member.name)
+            ws.cell(row=row_num, column=2, value=float(member.pledge))
+            ws.cell(row=row_num, column=3, value=float(member.paid_total))
+            ws.cell(row=row_num, column=4, value=float(member.remaining))
+            ws.cell(row=row_num, column=5, value=member.phone or '')
+            ws.cell(row=row_num, column=6, value=member.email or '')
+            ws.cell(row=row_num, column=7, value=member.course or '')
+            ws.cell(row=row_num, column=8, value=member.year or '')
+            ws.cell(row=row_num, column=9, value=member.status_display)
+            ws.cell(row=row_num, column=10, value=member.created_at.strftime('%Y-%m-%d'))
+
+            # Add borders to data cells
+            for col_num in range(1, 11):
+                ws.cell(row=row_num, column=col_num).border = border
+
+        # Adjust column widths
+        column_widths = [30, 15, 15, 15, 15, 25, 20, 10, 15, 15]
+        for col_num, width in enumerate(column_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_num)].width = width
+
+        # Save to BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Create response
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{request.tenant.slug}_members_{date.today().strftime("%Y%m%d")}.xlsx"'
+        return response
+
+
+class ExportTransactionsExcelAPIView(TenantMixin, APIView):
+    """Export transactions data to Excel format."""
+    permission_classes = [IsAuthenticated, IsOrgAdmin]
+
+    def get(self, request, org_slug):
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+
+        # Get transactions
+        transactions_qs = Transaction.objects.filter(
+            organization=request.tenant,
+        ).select_related('member', 'added_by').order_by('-date', '-created_at')
+
+        if date_from:
+            transactions_qs = transactions_qs.filter(date__gte=date_from)
+        if date_to:
+            transactions_qs = transactions_qs.filter(date__lte=date_to)
+
+        # Create workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Transactions Data"
+
+        # Add organization header
+        ws.merge_cells('A1:H1')
+        org_header = ws['A1']
+        org_header.value = f"{request.tenant.name} - Transactions Report"
+        org_header.font = Font(bold=True, size=14, color="FFFFFF")
+        org_header.fill = PatternFill(start_color="2c3e50", end_color="2c3e50", fill_type="solid")
+        org_header.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 25
+
+        # Add export date
+        ws.merge_cells('A2:H2')
+        date_cell = ws['A2']
+        date_cell.value = f"Exported on {date.today().strftime('%B %d, %Y')}"
+        date_cell.font = Font(italic=True, size=10, color="666666")
+        date_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[2].height = 15
+
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        center_alignment = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = ['Date', 'Member Name', 'Amount (TZS)', 'Note', 'Added By', 'Created Date']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=4, column=col_num)
+            cell.value = header
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = border
+            cell.alignment = center_alignment
+
+        # Add data
+        for row_num, txn in enumerate(transactions_qs, 5):
+            ws.cell(row=row_num, column=1, value=txn.date.strftime('%Y-%m-%d'))
+            ws.cell(row=row_num, column=2, value=txn.member_name)
+            ws.cell(row=row_num, column=3, value=float(txn.amount))
+            ws.cell(row=row_num, column=4, value=txn.note or '')
+            ws.cell(row=row_num, column=5, value=txn.added_by_username)
+            ws.cell(row=row_num, column=6, value=txn.created_at.strftime('%Y-%m-%d %H:%M'))
+
+            # Add borders to data cells
+            for col_num in range(1, 7):
+                ws.cell(row=row_num, column=col_num).border = border
+
+        # Adjust column widths
+        column_widths = [15, 30, 15, 30, 20, 20]
+        for col_num, width in enumerate(column_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_num)].width = width
+
+        # Save to BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Create response
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{request.tenant.slug}_transactions_{date.today().strftime("%Y%m%d")}.xlsx"'
+        return response
+
+
+class ExportReportPDFAPIView(TenantMixin, APIView):
+    """Export members report to PDF format."""
+    permission_classes = [IsAuthenticated, IsOrgMember]
+
+    def get(self, request, org_slug):
+        search = request.query_params.get('search', '')
+        filter_status = request.query_params.get('filter', '')
+
+        # Get members with filtering
+        members_qs = Member.objects.filter(
+            organization=request.tenant, is_active=True,
+        ).order_by('name')
+        members_qs = filter_members_queryset(members_qs, search, filter_status)
+
+        # Get stats
+        stats = get_dashboard_stats(request.tenant, members_qs)
+
+        # Create PDF
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{request.tenant.slug}_report_{date.today().strftime("%Y%m%d")}.pdf"'
+
+        doc = SimpleDocTemplate(response, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # Title
+        title_style = styles['Title']
+        title_style.alignment = 1  # Center
+        title = Paragraph(f"{request.tenant.name} - Financial Report", title_style)
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+
+        # Date
+        date_style = styles['Normal']
+        date_style.alignment = 1
+        date_para = Paragraph(f"Generated on {date.today().strftime('%B %d, %Y')}", date_style)
+        elements.append(date_para)
+        elements.append(Spacer(1, 24))
+
+        # Summary table
+        summary_data = [
+            ['Metric', 'Value'],
+            ['Total Pledged', f"TSh {float(stats['total_pledged']):,.2f}"],
+            ['Total Collected', f"TSh {float(stats['total_collected']):,.2f}"],
+            ['Target Amount', f"TSh {float(stats['target_amount']):,.2f}"],
+            ['Progress', f"{stats['progress_percentage']:.1f}%"],
+            ['Total Members', str(stats['member_count'])],
+            ['Complete', str(stats['complete_count'])],
+            ['Incomplete', str(stats['incomplete_count'])],
+            ['Not Started', str(stats['not_paid_count'])],
+            ['Exceeded', str(stats['exceeded_count'])],
+        ]
+
+        summary_table = Table(summary_data, colWidths=[2.5*inch, 3*inch])
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#4472C4')),
+            ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (1, 0), 12),
+            ('BACKGROUND', (0, 1), (1, -1), colors.beige),
+            ('GRID', (0, 0), (1, -1), 1, colors.black),
+        ]))
+        elements.append(summary_table)
+        elements.append(Spacer(1, 24))
+
+        # Members table
+        members_data = [['Name', 'Pledge', 'Paid', 'Remaining', 'Status']]
+        for member in members_qs:
+            members_data.append([
+                member.name,
+                f"TSh {float(member.pledge):,.0f}",
+                f"TSh {float(member.paid_total):,.0f}",
+                f"TSh {float(member.remaining):,.0f}",
+                member.status_display,
+            ])
+
+        members_table = Table(members_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+        members_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (4, 0), colors.HexColor('#4472C4')),
+            ('TEXTCOLOR', (0, 0), (4, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (4, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (4, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (4, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (4, 0), 12),
+            ('BACKGROUND', (0, 1), (4, -1), colors.beige),
+            ('GRID', (0, 0), (4, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (4, -1), 9),
+        ]))
+        elements.append(members_table)
+
+        doc.build(elements)
+        return response
+
+
+class ImportMembersExcelAPIView(TenantMixin, APIView):
+    """Import members from Excel file."""
+    permission_classes = [IsAuthenticated, IsOrgStaff, SubscriptionActive]
+
+    def post(self, request, org_slug):
+        if 'excel_file' not in request.FILES:
+            return error_response('No file uploaded', status=400)
+
+        excel_file = request.FILES['excel_file']
+        update_existing = request.data.get('update_existing', 'false').lower() == 'true'
+        default_pledge = request.data.get('default_pledge', '70000')
+
+        try:
+            default_pledge = Decimal(str(default_pledge))
+        except (InvalidOperation, ValueError):
+            default_pledge = Decimal('70000.00')
+
+        try:
+            workbook = openpyxl.load_workbook(BytesIO(excel_file.read()))
+            sheet = workbook.active
+
+            created_count = 0
+            updated_count = 0
+            transaction_count = 0
+            errors = []
+
+            for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                try:
+                    if not row[0]:
+                        continue  # Skip rows without a name
+
+                    name = str(row[0]).strip()
+                    pledge = row[1]
+                    paid = row[2] if len(row) > 2 else None
+                    phone = str(row[3]).strip() if len(row) > 3 and row[3] else ''
+                    email = str(row[4]).strip() if len(row) > 4 and row[4] else ''
+                    course = str(row[5]).strip() if len(row) > 5 and row[5] else ''
+                    year = str(row[6]).strip() if len(row) > 6 and row[6] else ''
+
+                    # Pledge
+                    try:
+                        pledge = Decimal(str(pledge)) if pledge else default_pledge
+                    except InvalidOperation:
+                        pledge = default_pledge
+                        errors.append(f"Row {idx}: Invalid pledge, using default for '{name}'")
+
+                    # Paid
+                    try:
+                        paid = Decimal(str(paid)) if paid else Decimal('0.00')
+                    except InvalidOperation:
+                        paid = Decimal('0.00')
+                        errors.append(f"Row {idx}: Invalid paid value for '{name}', using 0.00")
+
+                    member_created = False
+                    if update_existing:
+                        member, member_created = Member.objects.update_or_create(
+                            organization=request.tenant,
+                            name=name,
+                            defaults={
+                                'pledge': pledge,
+                                'phone': phone or None,
+                                'email': email or None,
+                                'course': course or None,
+                                'year': year or None,
+                            }
+                        )
+                    else:
+                        member = Member.objects.filter(organization=request.tenant, name=name).first()
+                        if not member:
+                            member = Member.objects.create(
+                                organization=request.tenant,
+                                name=name,
+                                pledge=pledge,
+                                phone=phone or None,
+                                email=email or None,
+                                course=course or None,
+                                year=year or None,
+                            )
+                            member_created = True
+                        else:
+                            errors.append(f"Row {idx}: Member '{name}' already exists and update is off.")
+                            continue
+
+                    if member_created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+
+                    # Transaction
+                    if paid > 0:
+                        existing_txn = Transaction.objects.filter(
+                            organization=request.tenant,
+                            member=member,
+                            date=date.today(),
+                            added_by=request.user,
+                            note__icontains="Imported via Excel"
+                        ).first()
+
+                        if existing_txn:
+                            # Update the amount if different
+                            if existing_txn.amount != paid:
+                                existing_txn.amount = paid
+                                existing_txn.note = f"Updated via Excel on {date.today().isoformat()}"
+                                existing_txn.save()
+                                transaction_count += 1
+                        else:
+                            # Create new transaction
+                            Transaction.objects.create(
+                                organization=request.tenant,
+                                member=member,
+                                amount=paid,
+                                date=date.today(),
+                                added_by=request.user,
+                                note=f"Imported via Excel on {date.today().isoformat()}"
+                            )
+                            transaction_count += 1
+
+                except Exception as e:
+                    errors.append(f"Row {idx}: Error processing member '{row[0]}' - {str(e)}")
+
+            return success_response({
+                'created_count': created_count,
+                'updated_count': updated_count,
+                'transaction_count': transaction_count,
+                'errors': errors[:10],  # Limit errors to prevent huge responses
+                'total_errors': len(errors),
+            })
+
+        except Exception as e:
+            return error_response(f'Excel processing error: {str(e)}', status=400)
