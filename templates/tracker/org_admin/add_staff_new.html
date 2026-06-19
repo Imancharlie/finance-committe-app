@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Add Staff Member - {{ organization.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="mb-4">
+                <h2 style="color: #7492b9; font-weight: 700;">
+                    <i class="bi bi-person-plus me-2"></i>Add Staff Member
+                </h2>
+                <p class="text-muted">Add a new team member to your organization</p>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Add Staff Form -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label for="username" class="form-label fw-600">Username</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="username" 
+                                name="username" 
+                                placeholder="Enter username"
+                                required
+                            >
+                            <small class="text-muted">Unique username for the staff member</small>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-600">Temporary Password</label>
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                id="password" 
+                                name="password" 
+                                placeholder="Enter temporary password"
+                                required
+                            >
+                            <small class="text-muted">They can change this after login</small>
+                        </div>
+
+                        <!-- Role -->
+                        <div class="mb-4">
+                            <label for="role" class="form-label fw-600">Role</label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="staff">Staff - Can add members, record contributions, edit data</option>
+                                <option value="admin">Admin - Can manage staff, add members, record contributions</option>
+                                <option value="viewer">Viewer - Read-only access, cannot edit or manage</option>
+                            </select>
+                            <small class="text-muted d-block mt-2">
+                                <strong>Staff:</strong> Can add members, record contributions, edit member data<br>
+                                <strong>Admin:</strong> Can do everything staff can do + manage other staff members<br>
+                                <strong>Viewer:</strong> Can only view data, no editing or management
+                            </small>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" style="background: #7492b9; border: none;">
+                                <i class="bi bi-check-circle me-1"></i>Add Staff Member
+                            </button>
+                            <a href="{% url 'tracker:org_staff_management' org_slug=organization.slug %}" class="btn btn-secondary flex-grow-1">
+                                <i class="bi bi-arrow-left me-1"></i>Back
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Current Staff List -->
+            {% if staff_members %}
+                <div class="mt-5">
+                    <h5 style="color: #7492b9; font-weight: 700;">
+                        <i class="bi bi-people me-2"></i>Current Team Members ({{ staff_members.count }})
+                    </h5>
+                    <div class="list-group mt-3">
+                        {% for org_user in staff_members %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ org_user.user.username }}</h6>
+                                    <small class="text-muted">{{ org_user.get_role_display }}</small>
+                                </div>
+                                <span class="badge" style="background: #7492b9;">{{ org_user.get_role_display }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .fw-600 {
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

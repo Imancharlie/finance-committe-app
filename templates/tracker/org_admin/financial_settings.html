@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Financial Settings - Organization Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .settings-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .settings-card h2 {
+        color: var(--primary-color);
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .form-group input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(116, 146, 185, 0.1);
+        outline: none;
+    }
+
+    .form-group small {
+        display: block;
+        color: #64748b;
+        margin-top: 0.4rem;
+        font-size: 0.85rem;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #5a7a9e;
+        box-shadow: 0 4px 12px rgba(116, 146, 185, 0.3);
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: #e2e8f0;
+        color: #64748b;
+    }
+
+    .btn-secondary:hover {
+        background: #cbd5e1;
+    }
+
+    .info-box {
+        background: #f0fdf4;
+        border-left: 4px solid var(--success-color);
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+        color: #166534;
+    }
+
+    .info-box strong {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .settings-card {
+            padding: 1.5rem;
+        }
+
+        .button-group {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <!-- Header -->
+    <div style="margin-bottom: 2rem;">
+        <h1 style="color: var(--primary-color); margin-bottom: 0.5rem;">
+            <i class="bi bi-gear me-2"></i>Financial Settings
+        </h1>
+        <p class="text-muted">Customize default pledge amount and collection target for your organization</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {% if message.tags == 'success' %}
+                    <i class="bi bi-check-circle me-2"></i>
+                {% elif message.tags == 'error' %}
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                {% endif %}
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Settings Card -->
+    <div class="settings-card">
+        <h2><i class="bi bi-currency-dollar me-2"></i>Financial Configuration</h2>
+
+        <!-- Info Box -->
+        <div class="info-box">
+            <strong>💡 How This Works</strong>
+            <p>
+                <strong>Default Pledge:</strong> Amount automatically filled when adding new members<br>
+                <strong>Target Amount:</strong> Collection goal shown in progress calculations
+            </p>
+        </div>
+
+        <!-- Form -->
+        <form method="POST">
+            {% csrf_token %}
+
+            <!-- Default Pledge Amount -->
+            <div class="form-group">
+                <label for="default_pledge_amount">
+                    <i class="bi bi-bookmark me-1" style="color: var(--primary-color);"></i>
+                    Default Pledge Amount (TZS)
+                </label>
+                <input 
+                    type="number" 
+                    id="default_pledge_amount" 
+                    name="default_pledge_amount" 
+                    value="{{ default_pledge_amount|intcomma }}" 
+                    min="0" 
+                    step="1000"
+                    required
+                    placeholder="e.g., 70000"
+                >
+                <small>
+                    This amount will be automatically filled when adding new members to your organization.
+                    Currently: <strong>TZS {{ default_pledge_amount|intcomma }}</strong>
+                </small>
+            </div>
+
+            <!-- Target Amount -->
+            <div class="form-group">
+                <label for="target_amount">
+                    <i class="bi bi-target me-1" style="color: var(--primary-color);"></i>
+                    Collection Target Amount (TZS)
+                </label>
+                <input 
+                    type="number" 
+                    id="target_amount" 
+                    name="target_amount" 
+                    value="{{ target_amount|intcomma }}" 
+                    min="0" 
+                    step="1000"
+                    required
+                    placeholder="e.g., 210000"
+                >
+                <small>
+                    This is your organization's collection goal. Progress percentages are calculated based on this target.
+                    Currently: <strong>TZS {{ target_amount|intcomma }}</strong>
+                </small>
+            </div>
+
+            <!-- Buttons -->
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                </button>
+                <a href="{% url 'tracker:org_admin_dashboard' org_slug=organization.slug %}" class="btn btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-x-lg me-1"></i>Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Quick Reference -->
+    <div style="margin-top: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <h5 style="color: var(--primary-color); margin-bottom: 1rem;">
+            <i class="bi bi-info-circle me-2"></i>Quick Reference
+        </h5>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.9rem;">
+            <div>
+                <strong>Where Used:</strong>
+                <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                    <li>Add Member Form</li>
+                    <li>Dashboard Progress</li>
+                    <li>Daily Collection</li>
+                    <li>Excel Exports</li>
+                    <li>PDF Reports</li>
+                </ul>
+            </div>
+            <div>
+                <strong>Example:</strong>
+                <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                    <li>Default: 70,000 TZS</li>
+                    <li>Target: 210,000 TZS</li>
+                    <li>Members: 3</li>
+                    <li>Progress: 100%</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

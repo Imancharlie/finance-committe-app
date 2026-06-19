@@ -1,0 +1,525 @@
+/* Custom Admin Styling - Modern & Responsive */
+
+:root {
+    --primary-color: #7492B9;
+    --secondary-color: #64748b;
+    --success-color: #059669;
+    --warning-color: #d97706;
+    --danger-color: #dc2626;
+    --light-bg: #f8fafc;
+    --border-color: #e2e8f0;
+}
+
+/* ============================================
+   ADMIN DASHBOARD HEADER & BRANDING
+   ============================================ */
+
+#header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #5a7a9e 100%);
+    border-bottom: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#header h1, #header h1 a {
+    color: white !important;
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+#header a {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#header a:hover {
+    color: white;
+}
+
+/* ============================================
+   ADMIN SIDEBAR
+   ============================================ */
+
+#sidebar {
+    background: #ffffff;
+    border-right: 1px solid var(--border-color);
+}
+
+#sidebar h2 {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 0;
+}
+
+#sidebar ul {
+    padding: 0.5rem 0;
+}
+
+#sidebar li {
+    margin: 0;
+}
+
+#sidebar a {
+    color: var(--secondary-color);
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+#sidebar a:hover {
+    background: var(--light-bg);
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+}
+
+/* ============================================
+   ADMIN CONTENT AREA
+   ============================================ */
+
+#content {
+    background: var(--light-bg);
+    padding: 1.5rem;
+}
+
+/* ============================================
+   STAT CARDS (Dashboard Stats) - EXACT DASHBOARD STYLING
+   ============================================ */
+
+/* Horizontal layout for stat cards - EXACT DASHBOARD STYLE */
+.stat-cards-container, .dashboard-stats, .admin-stats {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    width: 100%;
+    flex-wrap: nowrap; /* Keep cards in one row */
+    overflow-x: auto; /* Allow horizontal scrolling on very small screens */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding-bottom: 0.5rem;
+}
+
+.stat-card, .dashboard-card, .admin-stat-card {
+    flex: 1; /* Equal width distribution */
+    min-width: 100px; /* Minimum readable size */
+    max-width: none; /* Remove max-width restriction */
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.stat-card:hover, .dashboard-card:hover, .admin-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0; /* Prevent overflow */
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #6c757d;
+    font-weight: 500;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #343a40;
+    line-height: 1;
+    word-break: break-word;
+}
+
+.stat-icon {
+    font-size: 1.8rem;
+    opacity: 0.7;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+/* ============================================
+   ADMIN FORMS & FIELDSETS
+   ============================================ */
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+fieldset {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+fieldset h2 {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1rem;
+    margin: -1.25rem -1.25rem 1rem -1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 7px 7px 0 0;
+}
+
+fieldset.collapse h2 {
+    background: var(--secondary-color);
+}
+
+/* ============================================
+   FORM INPUTS & CONTROLS
+   ============================================ */
+
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="password"],
+textarea,
+select {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(116, 146, 185, 0.1);
+    outline: none;
+}
+
+/* ============================================
+   ADMIN BUTTONS
+   ============================================ */
+
+.button, input[type="submit"], input[type="button"], button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.button:hover, input[type="submit"]:hover, input[type="button"]:hover, button:hover {
+    background: #5a7a9e;
+    box-shadow: 0 4px 12px rgba(116, 146, 185, 0.3);
+    transform: translateY(-1px);
+}
+
+.button.default {
+    background: var(--secondary-color);
+}
+
+.button.default:hover {
+    background: #475569;
+}
+
+/* ============================================
+   ADMIN TABLES
+   ============================================ */
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+thead th {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: none;
+}
+
+tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s ease;
+}
+
+tbody tr:hover {
+    background: var(--light-bg);
+}
+
+tbody td {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* ============================================
+   ADMIN MESSAGES & ALERTS
+   ============================================ */
+
+.messagelist {
+    margin-bottom: 1.5rem;
+}
+
+.messagelist li {
+    background: var(--light-bg);
+    border-left: 4px solid var(--primary-color);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.messagelist .success {
+    border-left-color: var(--success-color);
+    background: #f0fdf4;
+}
+
+.messagelist .error {
+    border-left-color: var(--danger-color);
+    background: #fef2f2;
+}
+
+.messagelist .warning {
+    border-left-color: var(--warning-color);
+    background: #fffbeb;
+}
+
+/* ============================================
+   ADMIN FILTERS & SEARCH
+   ============================================ */
+
+#changelist-filter {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+
+#changelist-filter h2 {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.75rem;
+    margin: -1rem -1rem 1rem -1rem;
+    font-size: 0.9rem;
+    border-radius: 7px 7px 0 0;
+}
+
+#changelist-filter ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+}
+
+#changelist-filter li {
+    margin-bottom: 0.5rem;
+}
+
+#changelist-filter a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+#changelist-filter a:hover {
+    color: #5a7a9e;
+    text-decoration: underline;
+}
+
+#changelist-filter .selected a {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 1024px) {
+    #sidebar {
+        width: 200px;
+    }
+
+    .stat-cards-container .stat-card,
+    .dashboard-stats .stat-card {
+        max-width: 150px;
+    }
+
+    .form-row {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    #sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+
+    #content {
+        padding: 1rem;
+    }
+
+    .stat-cards-container,
+    .dashboard-stats,
+    .admin-stats {
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .stat-card,
+    .dashboard-card,
+    .admin-stat-card {
+        flex: 1;
+        min-width: 100px;
+        padding: 0.75rem;
+        min-height: 60px;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+    }
+
+    .stat-icon {
+        font-size: 1.8rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    table {
+        font-size: 0.8rem;
+    }
+
+    thead th, tbody td {
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    #header h1 {
+        font-size: 1.2rem;
+    }
+
+    .stat-cards-container .stat-card,
+    .dashboard-stats .stat-card {
+        min-width: 80px;
+        max-width: 100px;
+        padding: 0.5rem;
+    }
+
+    .stat-card h3, .dashboard-card h3 {
+        font-size: 0.6rem;
+    }
+
+    .stat-card .stat-value, .dashboard-card .stat-value {
+        font-size: 1rem;
+    }
+
+    fieldset {
+        padding: 1rem;
+    }
+
+    fieldset h2 {
+        margin: -1rem -1rem 0.75rem -1rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* ============================================
+   ADMIN CHANGE FORM
+   ============================================ */
+
+.submit-row {
+    background: white;
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+    margin-top: 1.5rem;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.submit-row input {
+    margin: 0;
+}
+
+/* ============================================
+   ADMIN READONLY FIELDS
+   ============================================ */
+
+.readonly {
+    background: var(--light-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+}
+
+/* ============================================
+   ADMIN INLINE EDITING
+   ============================================ */
+
+.inline-group {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.inline-group h2 {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1rem;
+    margin: -1rem -1rem 1rem -1rem;
+    font-size: 0.9rem;
+    border-radius: 7px 7px 0 0;
+}

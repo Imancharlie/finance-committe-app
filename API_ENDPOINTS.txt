@@ -1,0 +1,1180 @@
+# Bossin Finance API Documentation
+# Version: 1.0.0
+# Base URL: /api/v1/
+
+## Authentication
+All endpoints (except public ones) require JWT authentication via Authorization header:
+Authorization: Bearer <access_token>
+
+## Response Format
+All responses follow this structure:
+{
+  "success": true/false,
+  "data": {...},  // or null
+  "error": null   // or error message string
+}
+
+---
+
+## SYSTEM ENDPOINTS
+
+### 1. Health Check
+**Endpoint:** GET /api/v1/health/
+**Authentication:** None (Public)
+**Description:** Check API and database health status
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "database": "connected",
+    "timestamp": "2025-01-15T10:30:00Z",
+    "version": "1.0.0"
+  },
+  "error": null
+}
+
+---
+
+### 2. Help/Support Info
+**Endpoint:** GET /api/v1/help/
+**Authentication:** None (Public)
+**Description:** Get support contact information and payment details
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "support_email": "kodinsoftwares@gmail.com",
+    "support_phone": "+255614021404",
+    "mpesa_number": "68256127",
+    "mpesa_account_name": "MIPT SOFTWARES",
+    "whatsapp_number": "+255614021404"
+  },
+  "error": null
+}
+
+---
+
+### 3. API Schema (OpenAPI/Swagger)
+**Endpoint:** GET /api/v1/schema/
+**Authentication:** None (Public)
+**Description:** Get OpenAPI 3.0 schema for API documentation
+
+### 4. API Documentation (Swagger UI)
+**Endpoint:** GET /api/v1/docs/
+**Authentication:** None (Public)
+**Description:** Interactive API documentation (Swagger UI)
+
+---
+
+## AUTHENTICATION ENDPOINTS
+
+### 5. Login
+**Endpoint:** POST /api/v1/auth/login/
+**Authentication:** None (Public)
+**Description:** Authenticate user and get JWT tokens
+
+**Request Body:**
+{
+  "username": "string (required)",
+  "password": "string (required)"
+}
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "tokens": {
+      "refresh": "jwt_refresh_token",
+      "access": "jwt_access_token"
+    },
+    "user": {
+      "id": 1,
+      "username": "iman_doe",
+      "email": "john@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone": "+255123456789",
+      "needs_onboarding": false,
+      "onboarding_completed": true
+    },
+    "default_org": {
+      "id": 1,
+      "name": "My Organization",
+      "slug": "my-org",
+      "description": "Organization description",
+      "category": "organization",
+      "subscription_status": "SUBSCRIBED",
+      "subscription_expires_at": "2025-02-15T00:00:00Z",
+      "trial_started_at": "2025-01-01T00:00:00Z",
+      "is_active": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "theme": {...},
+      "subscription_info": {...},
+      "user_role": "owner"
+    },
+    "organizations": [...]
+  },
+  "error": null
+}
+
+**Error Response (400):**
+{
+  "success": false,
+  "data": null,
+  "error": "Invalid username or password."
+}
+
+---
+
+### 6. Register (Sign Up)
+**Endpoint:** POST /api/v1/auth/register/
+**Authentication:** None (Public)
+**Description:** Create new user account and organization
+
+**Request Body:**
+{
+  "username": "string (required, max 150)",
+  "email": "string (required, email format)",
+  "password": "string (required, min 8 chars)",
+  "first_name": "string (required, max 150)",
+  "last_name": "string (required, max 150)",
+  "organization_name": "string (required, max 255)",
+  "organization_description": "string (optional)",
+  "accept_terms": "boolean (required, must be true)"
+}
+
+**Response (201 Created):**
+{
+  "success": true,
+  "data": {
+    "tokens": {
+      "refresh": "jwt_refresh_token",
+      "access": "jwt_access_token"
+    },
+    "user": {
+      "id": 1,
+      "username": "john_doe",
+      "email": "john@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone": null,
+      "needs_onboarding": false,
+      "onboarding_completed": false
+    },
+    "organization": {
+      "id": 1,
+      "name": "My Organization",
+      "slug": "my-org",
+      "description": "Organization description",
+      "category": "organization",
+      "subscription_status": "FREE_TRIAL",
+      "subscription_expires_at": null,
+      "trial_started_at": "2025-01-15T10:30:00Z",
+      "is_active": true,
+      "created_at": "2025-01-15T10:30:00Z",
+      "theme": {...},
+      "subscription_info": {...},
+      "user_role": "owner"
+    }
+  },
+  "error": null
+}
+
+---
+
+### 7. Refresh Token
+**Endpoint:** POST /api/v1/auth/refresh/
+**Authentication:** None (Public)
+**Description:** Refresh JWT access token using refresh token
+
+**Request Body:**
+{
+  "refresh": "jwt_refresh_token (required)"
+}
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "tokens": {
+      "access": "new_jwt_access_token",
+      "refresh": "new_jwt_refresh_token"
+    }
+  },
+  "error": null
+}
+
+---
+
+### 8. Current User Info (Me)
+**Endpoint:** GET /api/v1/auth/me/
+**Authentication:** Required (JWT)
+**Description:** Get current user profile and organization memberships
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": 1,
+      "username": "john_doe",
+      "email": "john@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone": "+255123456789",
+      "needs_onboarding": false,
+      "onboarding_completed": true
+    },
+    "organizations": [
+      {
+        "id": 1,
+        "name": "My Organization",
+        "slug": "my-org",
+        "description": "Organization description",
+        "category": "organization",
+        "subscription_status": "SUBSCRIBED",
+        "subscription_expires_at": "2025-02-15T00:00:00Z",
+        "trial_started_at": "2025-01-01T00:00:00Z",
+        "is_active": true,
+        "created_at": "2025-01-01T00:00:00Z",
+        "theme": {...},
+        "subscription_info": {...},
+        "user_role": "owner"
+      }
+    ],
+    "memberships": [
+      {
+        "organization_slug": "my-org",
+        "organization_name": "My Organization",
+        "role": "owner"
+      }
+    ]
+  },
+  "error": null
+}
+
+---
+
+## ORGANIZATION ENDPOINTS
+
+### 9. List User Organizations
+**Endpoint:** GET /api/v1/orgs/
+**Authentication:** Required (JWT)
+**Description:** Get all organizations the authenticated user is a member of
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "organizations": [
+      {
+        "id": 1,
+        "name": "My Organization",
+        "slug": "my-org",
+        "description": "Organization description",
+        "category": "organization",
+        "subscription_status": "SUBSCRIBED",
+        "subscription_expires_at": "2025-02-15T00:00:00Z",
+        "trial_started_at": "2025-01-01T00:00:00Z",
+        "is_active": true,
+        "created_at": "2025-01-01T00:00:00Z",
+        "theme": {
+          "primary_color": "#7492b9",
+          "secondary_color": "#6c757d",
+          "success_color": "#28a745",
+          "warning_color": "#ffc107",
+          "danger_color": "#dc3545",
+          "navbar_title": "My Organization",
+          "footer_text": "",
+          "watermark_text": "Bossin",
+          "default_pledge_amount": "70000.00",
+          "target_amount": "210000.00",
+          "logo_url": null
+        },
+        "subscription_info": {
+          "subscription_status": "SUBSCRIBED",
+          "is_active": true,
+          "trial_active": false,
+          "subscription_active": true,
+          "days_remaining": 30,
+          "subscription_expires_at": "2025-02-15T00:00:00Z",
+          "trial_started_at": "2025-01-01T00:00:00Z"
+        },
+        "user_role": "owner"
+      }
+    ]
+  },
+  "error": null
+}
+
+---
+
+### 10. Organization Detail
+**Endpoint:** GET /api/v1/orgs/{org_slug}/
+**Authentication:** Required (JWT), IsOrgMember
+**Description:** Get detailed information about a specific organization
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "My Organization",
+    "slug": "my-org",
+    "description": "Organization description",
+    "category": "organization",
+    "subscription_status": "SUBSCRIBED",
+    "subscription_expires_at": "2025-02-15T00:00:00Z",
+    "trial_started_at": "2025-01-01T00:00:00Z",
+    "is_active": true,
+    "created_at": "2025-01-01T00:00:00Z",
+    "theme": {...},
+    "subscription_info": {...},
+    "user_role": "owner"
+  },
+  "error": null
+}
+
+**Update (PATCH):**
+**Authentication:** Required (JWT), IsOrgAdmin
+**Request Body:**
+{
+  "name": "string (optional)",
+  "description": "string (optional)",
+  "category": "string (optional, choices: organization, religious, wedding_sendoff, ceremonies, condolence, collection_other)"
+}
+
+---
+
+### 11. Organization Theme
+**Endpoint:** GET /api/v1/orgs/{org_slug}/theme/
+**Authentication:** Required (JWT), IsOrgMember
+**Description:** Get organization theme/branding settings
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "primary_color": "#7492b9",
+    "secondary_color": "#6c757d",
+    "success_color": "#28a745",
+    "warning_color": "#ffc107",
+    "danger_color": "#dc3545",
+    "navbar_title": "My Organization",
+    "footer_text": "",
+    "watermark_text": "Bossin",
+    "default_pledge_amount": "70000.00",
+    "target_amount": "210000.00",
+    "logo_url": null
+  },
+  "error": null
+}
+
+**Update (PATCH):**
+**Authentication:** Required (JWT), IsOrgAdmin
+**Request Body:**
+{
+  "primary_color": "string (optional, hex format)",
+  "secondary_color": "string (optional, hex format)",
+  "success_color": "string (optional, hex format)",
+  "warning_color": "string (optional, hex format)",
+  "danger_color": "string (optional, hex format)",
+  "navbar_title": "string (optional)",
+  "footer_text": "string (optional)",
+  "watermark_text": "string (optional)",
+  "default_pledge_amount": "decimal (optional)",
+  "target_amount": "decimal (optional)",
+  "logo": "file (optional)"
+}
+
+---
+
+### 12. Dashboard Statistics
+**Endpoint:** GET /api/v1/orgs/{org_slug}/dashboard/stats/
+**Authentication:** Required (JWT), IsOrgMember
+**Description:** Get dashboard statistics for an organization
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Query Parameters:**
+- search (string, optional): Search term for filtering members
+- filter (string, optional): Status filter (not_started, incomplete, complete, exceeded, pledged)
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "total_collected": "150000.00",
+    "total_pledged": "210000.00",
+    "target_amount": "210000.00",
+    "progress_percentage": 71.43,
+    "member_count": 3,
+    "not_paid_count": 0,
+    "incomplete_count": 1,
+    "complete_count": 2,
+    "exceeded_count": 0
+  },
+  "error": null
+}
+
+---
+
+### 13. Staff Onboarding
+**Endpoint:** POST /api/v1/orgs/{org_slug}/onboarding/
+**Authentication:** Required (JWT), IsOrgMember
+**Description:** Complete staff onboarding (email/phone collection)
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Request Body:**
+{
+  "email": "string (required, email format)",
+  "phone": "string (optional, max 20)"
+}
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": 1,
+      "username": "john_doe",
+      "email": "john@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone": "+255123456789",
+      "needs_onboarding": false,
+      "onboarding_completed": true
+    },
+    "message": "Profile completed successfully."
+  },
+  "error": null
+}
+
+---
+
+## MEMBER ENDPOINTS
+
+### 14. List Members
+**Endpoint:** GET /api/v1/orgs/{org_slug}/members/
+**Authentication:** Required (JWT), IsOrgMember, SubscriptionActive
+**Description:** List all members in an organization with pagination
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Query Parameters:**
+- search (string, optional): Search by name, phone, or email
+- filter (string, optional): Filter by status (not_started, incomplete, complete, exceeded, pledged)
+- page (integer, optional): Page number (default: 1)
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "pledge": "70000.00",
+      "paid_total": "70000.00",
+      "remaining": "0.00",
+      "phone": "+255123456789",
+      "email": "john@example.com",
+      "course": "Computer Science",
+      "year": "3",
+      "is_active": true,
+      "status_display": "Complete",
+      "is_complete": true,
+      "is_incomplete": false,
+      "not_started": false,
+      "has_exceeded": false,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-15T00:00:00Z"
+    }
+  ],
+  "error": null
+}
+
+**Create Member (POST):**
+**Authentication:** Required (JWT), IsOrgStaff, SubscriptionActive
+**Request Body:**
+{
+  "name": "string (required)",
+  "pledge": "decimal (required, > 0)",
+  "phone": "string (optional)",
+  "email": "string (optional, email format)",
+  "course": "string (optional)",
+  "year": "string (optional)"
+}
+
+**Response (201 Created):**
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "name": "Jane Smith",
+    "pledge": "70000.00",
+    "paid_total": "0.00",
+    "remaining": "70000.00",
+    "phone": "+255987654321",
+    "email": "jane@example.com",
+    "course": "Business",
+    "year": "2",
+    "is_active": true,
+    "status_display": "Not Started",
+    "is_complete": false,
+    "is_incomplete": false,
+    "not_started": true,
+    "has_exceeded": false,
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  },
+  "error": null
+}
+
+---
+
+### 15. Member Detail
+**Endpoint:** GET /api/v1/orgs/{org_slug}/members/{member_id}/
+**Authentication:** Required (JWT), IsOrgMember, SubscriptionActive
+**Description:** Get detailed information about a specific member
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+- member_id (integer, required): Member ID
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "John Doe",
+    "pledge": "70000.00",
+    "paid_total": "70000.00",
+    "remaining": "0.00",
+    "phone": "+255123456789",
+    "email": "john@example.com",
+    "course": "Computer Science",
+    "year": "3",
+    "is_active": true,
+    "status_display": "Complete",
+    "is_complete": true,
+    "is_incomplete": false,
+    "not_started": false,
+    "has_exceeded": false,
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-15T00:00:00Z"
+  },
+  "error": null
+}
+
+**Update (PATCH):**
+**Authentication:** Required (JWT), IsOrgStaff, SubscriptionActive
+**Request Body:**
+{
+  "name": "string (optional)",
+  "pledge": "decimal (optional, > 0)",
+  "phone": "string (optional)",
+  "email": "string (optional)",
+  "course": "string (optional)",
+  "year": "string (optional)"
+}
+
+**Delete (DELETE):**
+**Authentication:** Required (JWT), IsOrgStaff, SubscriptionActive
+**Description:** Soft delete (deactivate) member
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "message": "Member deactivated successfully."
+  },
+  "error": null
+}
+
+---
+
+### 16. Member Transactions
+**Endpoint:** GET /api/v1/orgs/{org_slug}/members/{member_id}/transactions/
+**Authentication:** Required (JWT), IsOrgMember
+**Description:** Get all transactions for a specific member
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+- member_id (integer, required): Member ID
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "member": 1,
+      "member_name": "John Doe",
+      "amount": "70000.00",
+      "date": "2025-01-15",
+      "note": "Full payment",
+      "added_by": 1,
+      "added_by_username": "admin",
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T10:30:00Z"
+    }
+  ],
+  "error": null
+}
+
+**Record Payment (POST):**
+**Authentication:** Required (JWT), CanRecordTransactions, SubscriptionActive
+**Request Body:**
+{
+  "amount": "decimal (required, > 0)",
+  "date": "date (optional, YYYY-MM-DD format)",
+  "note": "string (optional, max 500)"
+}
+
+**Response (201 Created):**
+{
+  "success": true,
+  "data": {
+    "transaction": {
+      "id": 2,
+      "member": 1,
+      "member_name": "John Doe",
+      "amount": "50000.00",
+      "date": "2025-01-15",
+      "note": "Partial payment",
+      "added_by": 1,
+      "added_by_username": "admin",
+      "created_at": "2025-01-15T10:35:00Z",
+      "updated_at": "2025-01-15T10:35:00Z"
+    },
+    "member": {
+      "id": 1,
+      "name": "John Doe",
+      "pledge": "70000.00",
+      "paid_total": "120000.00",
+      "remaining": "-50000.00",
+      "phone": "+255123456789",
+      "email": "john@example.com",
+      "course": "Computer Science",
+      "year": "3",
+      "is_active": true,
+      "status_display": "Exceeded",
+      "is_complete": true,
+      "is_incomplete": false,
+      "not_started": false,
+      "has_exceeded": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-15T10:35:00Z"
+    }
+  },
+  "error": null
+}
+
+---
+
+## TRANSACTION ENDPOINTS
+
+### 17. List Transactions
+**Endpoint:** GET /api/v1/orgs/{org_slug}/transactions/
+**Authentication:** Required (JWT), IsOrgAdmin
+**Description:** List all transactions in an organization with filtering
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Query Parameters:**
+- date_from (string, optional): Filter transactions from this date (YYYY-MM-DD)
+- date_to (string, optional): Filter transactions until this date (YYYY-MM-DD)
+- member_id (integer, optional): Filter by member ID
+- added_by (integer, optional): Filter by user ID who added the transaction
+- page (integer, optional): Page number (default: 1)
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "member": 1,
+      "member_name": "John Doe",
+      "amount": "70000.00",
+      "date": "2025-01-15",
+      "note": "Full payment",
+      "added_by": 1,
+      "added_by_username": "admin",
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T10:30:00Z"
+    }
+  ],
+  "error": null
+}
+
+---
+
+### 18. Bulk Payment
+**Endpoint:** POST /api/v1/orgs/{org_slug}/transactions/bulk/
+**Authentication:** Required (JWT), CanRecordTransactions, SubscriptionActive
+**Description:** Record multiple daily collection payments at once
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Request Body:**
+{
+  "payments": [
+    {
+      "member_id": 1,
+      "payment_amount": "50000.00",
+      "note": "Daily collection"
+    },
+    {
+      "member_id": 2,
+      "payment_amount": "30000.00",
+      "note": "Daily collection"
+    }
+  ]
+}
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "recorded": [
+      {
+        "transaction_id": 3,
+        "member": {
+          "id": 1,
+          "name": "John Doe",
+          "pledge": "70000.00",
+          "paid_total": "120000.00",
+          "remaining": "-50000.00",
+          ...
+        }
+      },
+      {
+        "transaction_id": 4,
+        "member": {
+          "id": 2,
+          "name": "Jane Smith",
+          "pledge": "70000.00",
+          "paid_total": "30000.00",
+          "remaining": "40000.00",
+          ...
+        }
+      }
+    ],
+    "errors": [],
+    "success_count": 2,
+    "error_count": 0
+  },
+  "error": null
+}
+
+---
+
+### 19. Transaction Detail
+**Endpoint:** GET /api/v1/orgs/{org_slug}/transactions/{transaction_id}/
+**Authentication:** Required (JWT), IsOrgAdmin, SubscriptionActive
+**Description:** Get detailed information about a specific transaction
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+- transaction_id (integer, required): Transaction ID
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "member": 1,
+    "member_name": "John Doe",
+    "amount": "70000.00",
+    "date": "2025-01-15",
+    "note": "Full payment",
+    "added_by": 1,
+    "added_by_username": "admin",
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  },
+  "error": null
+}
+
+**Update (PATCH):**
+**Authentication:** Required (JWT), IsOrgAdmin, SubscriptionActive
+**Request Body:**
+{
+  "amount": "decimal (optional, > 0, max 10000000)",
+  "date": "date (optional, YYYY-MM-DD format)",
+  "note": "string (optional, max 500)"
+}
+
+**Delete (DELETE):**
+**Authentication:** Required (JWT), IsOrgAdmin, SubscriptionActive
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "message": "Transaction deleted successfully."
+  },
+  "error": null
+}
+
+---
+
+## STAFF MANAGEMENT ENDPOINTS
+
+### 20. List Staff
+**Endpoint:** GET /api/v1/orgs/{org_slug}/staff/
+**Authentication:** Required (JWT), IsOrgAdmin
+**Description:** List all staff members in an organization
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "user": {
+        "id": 1,
+        "username": "john_doe",
+        "email": "john@example.com",
+        "first_name": "John",
+        "last_name": "Doe",
+        "phone": "+255123456789"
+      },
+      "role": "owner",
+      "is_active": true,
+      "joined_at": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": 2,
+      "user": {
+        "id": 2,
+        "username": "jane_smith",
+        "email": "jane@example.com",
+        "first_name": "Jane",
+        "last_name": "Smith",
+        "phone": "+255987654321"
+      },
+      "role": "admin",
+      "is_active": true,
+      "joined_at": "2025-01-05T00:00:00Z"
+    }
+  ],
+  "error": null
+}
+
+**Add Staff (POST):**
+**Authentication:** Required (JWT), IsOrgAdmin
+**Request Body:**
+{
+  "username": "string (required, max 150)",
+  "email": "string (optional, email format)",
+  "first_name": "string (optional)",
+  "last_name": "string (optional)",
+  "password": "string (required, min 8 chars)",
+  "role": "string (optional, choices: admin, staff, viewer, default: staff)"
+}
+
+**Response (201 Created):**
+{
+  "success": true,
+  "data": {
+    "id": 3,
+    "user": {
+      "id": 3,
+      "username": "new_user",
+      "email": "new@example.com",
+      "first_name": "New",
+      "last_name": "User",
+      "phone": null
+    },
+    "role": "staff",
+    "is_active": true,
+    "joined_at": "2025-01-15T10:40:00Z"
+  },
+  "error": null
+}
+
+---
+
+### 21. Staff Detail
+**Endpoint:** PATCH /api/v1/orgs/{org_slug}/staff/{staff_id}/
+**Authentication:** Required (JWT), IsOrgAdmin
+**Description:** Update staff member role or status
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+- staff_id (integer, required): Staff member ID
+
+**Request Body:**
+{
+  "role": "string (optional, choices: admin, staff, viewer)",
+  "is_active": "boolean (optional)"
+}
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "user": {
+      "id": 2,
+      "username": "jane_smith",
+      "email": "jane@example.com",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "phone": "+255987654321"
+    },
+    "role": "viewer",
+    "is_active": false,
+    "joined_at": "2025-01-05T00:00:00Z"
+  },
+  "error": null
+}
+
+**Delete (DELETE):**
+**Authentication:** Required (JWT), IsOrgAdmin
+**Description:** Deactivate staff member (cannot delete owner)
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "message": "Staff member deactivated."
+  },
+  "error": null
+}
+
+---
+
+## AUDIT LOG ENDPOINTS
+
+### 22. Member Edit Log
+**Endpoint:** GET /api/v1/orgs/{org_slug}/audit/member-edits/
+**Authentication:** Required (JWT), IsOrgOwner
+**Description:** Get audit log of all member edits (owner only)
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Query Parameters:**
+- page (integer, optional): Page number (default: 1)
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "member": 1,
+      "member_name": "John Doe",
+      "field_changed": "paid_total",
+      "before_value": "50000.00",
+      "after_value": "70000.00",
+      "edited_by": 1,
+      "edited_by_username": "admin",
+      "created_at": "2025-01-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "member": 1,
+      "member_name": "John Doe",
+      "field_changed": "phone",
+      "before_value": "+255123456789",
+      "after_value": "+255987654321",
+      "edited_by": 2,
+      "edited_by_username": "jane_smith",
+      "created_at": "2025-01-15T11:00:00Z"
+    }
+  ],
+  "error": null
+}
+
+---
+
+## SUBSCRIPTION & BILLING ENDPOINTS
+
+### 23. Subscription Status
+**Endpoint:** GET /api/v1/orgs/{org_slug}/subscription/
+**Authentication:** Required (JWT), IsOrgMember
+**Description:** Get subscription status and pricing information
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Response (200 OK):**
+{
+  "success": true,
+  "data": {
+    "subscription": {
+      "subscription_status": "SUBSCRIBED",
+      "is_active": true,
+      "trial_active": false,
+      "subscription_active": true,
+      "days_remaining": 30,
+      "subscription_expires_at": "2025-02-15T00:00:00Z",
+      "trial_started_at": "2025-01-01T00:00:00Z"
+    },
+    "pricing": {
+      "base_price_tzs": "19800.00",
+      "category_discount_percent": 35,
+      "category": "organization",
+      "mpesa_number": "68256127",
+      "mpesa_account_name": "MIPT SOFTWARES",
+      "support_email": "support@bossin.com",
+      "support_phone": "+255614021404"
+    },
+    "pending_request": null,
+    "recent_requests": []
+  },
+  "error": null
+}
+
+---
+
+### 24. Create Payment Request
+**Endpoint:** POST /api/v1/orgs/{org_slug}/subscription/payment-requests/
+**Authentication:** Required (JWT), IsOrgAdmin
+**Description:** Submit a subscription payment request
+
+**URL Parameters:**
+- org_slug (string, required): Organization slug
+
+**Request Body:**
+{
+  "months": "integer (required, min 1, max 12)",
+  "reference_note": "string (optional, max 120)",
+  "payment_method": "string (optional, choices: mobile_payment, wakala)",
+  "amount_sent": "decimal (optional)"
+}
+
+**Response (201 Created):**
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "months": 3,
+    "is_trial": false,
+    "amount_tzs": "54690.00",
+    "discount_percent": 35,
+    "category_snapshot": "organization",
+    "status": "pending",
+    "reference_note": "Payment for 3 months",
+    "payment_method": "mobile_payment",
+    "amount_sent": "54690.00",
+    "submitted_by": 1,
+    "submitted_by_username": "admin",
+    "created_at": "2025-01-15T10:45:00Z",
+    "updated_at": "2025-01-15T10:45:00Z"
+  },
+  "error": null
+}
+
+---
+
+## PERMISSION ROLES
+
+### Role Hierarchy (from lowest to highest):
+1. **viewer**: Read-only access to organization data
+2. **staff**: Can record transactions and view data
+3. **admin**: Can manage staff and view reports
+4. **owner**: Full control including organization settings and audit logs
+
+### Permission Classes:
+- **IsOrgMember**: User must be an active member of the organization
+- **IsOrgStaff**: User must be staff, admin, or owner
+- **IsOrgAdmin**: User must be admin or owner
+- **IsOrgOwner**: User must be organization owner
+- **CanRecordTransactions**: User can record transactions (admin or owner)
+- **ReadOnlyForViewer**: Viewers can only use safe (read) methods
+- **SubscriptionActive**: Organization must have active subscription or trial (viewers exempt)
+
+---
+
+## ERROR RESPONSES
+
+### 400 Bad Request
+{
+  "success": false,
+  "data": null,
+  "error": "Validation error message"
+}
+
+### 401 Unauthorized
+{
+  "success": false,
+  "data": null,
+  "error": "Authentication credentials were not provided."
+}
+
+### 403 Forbidden
+{
+  "success": false,
+  "data": null,
+  "error": "You do not have permission to perform this action."
+}
+
+### 404 Not Found
+{
+  "success": false,
+  "data": null,
+  "error": "Not found."
+}
+
+### 402 Payment Required (Subscription Expired)
+{
+  "success": false,
+  "data": null,
+  "error": "Subscription expired. Please renew to continue.",
+  "subscription_required": true
+}
+
+### 500 Internal Server Error
+{
+  "success": false,
+  "data": null,
+  "error": "Internal server error message"
+}
+
+---
+
+## PAGINATION
+
+List endpoints support pagination with the `page` query parameter (default: 25 items per page).
+
+**Paginated Response:**
+{
+  "count": 100,
+  "next": "http://api.example.com/api/v1/orgs/my-org/members/?page=2",
+  "previous": null,
+  "success": true,
+  "data": [...],
+  "error": null
+}
+
+---
+
+## NOTES
+
+1. **Multi-Tenancy**: All organization-scoped endpoints require `org_slug` in the URL
+2. **Subscription Enforcement**: Most endpoints require active subscription (viewers exempt)
+3. **Data Isolation**: All data is isolated by organization - users can only access their organization's data
+4. **JWT Tokens**: Access tokens expire after 12 hours, refresh tokens after 30 days
+5. **Currency**: All amounts are in Tanzanian Shillings (TZS)
+6. **Date Format**: All dates use ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
+7. **API Documentation**: Interactive Swagger UI available at /api/v1/docs/

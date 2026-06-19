@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Subscription Renewal - {{ organization.name }}{% endblock %}
+
+{% block content %}
+
+<div class="container" style="max-width: 600px; margin: 2rem auto; padding: 0 1rem;">
+    
+    {% if pending_request or recent_declined %}
+    <!-- Pending/Declined Request Status View -->
+    {% if pending_request %}
+    <div class="text-center mb-3">
+        <div class="mb-2">
+            <i class="bi bi-hourglass-split" style="font-size: 3rem; color: {% if primary_color %}{{ primary_color }}{% else %}#7492b9{% endif %};"></i>
+        </div>
+        <h3 class="fw-bold mb-1" style="font-size: 1.5rem;">Payment Request Submitted</h3>
+        <p class="text-muted mb-0" style="font-size: 0.9rem;">Your request is being reviewed</p>
+    </div>
+
+    <!-- Request Status Card -->
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body p-4">
+            <div class="text-center mb-3">
+                <span class="badge {% if pending_request.status == 'declined' %}bg-danger{% elif pending_request.status == 'approved' %}bg-success{% else %}bg-warning{% endif %} px-3 py-2" style="font-size: 0.9rem;">
+                    <i class="bi {% if pending_request.status == 'declined' %}bi-x-circle{% elif pending_request.status == 'approved' %}bi-check-circle{% else %}bi-clock-history{% endif %} me-1"></i>
+                    {{ pending_request.get_status_display }}
+                </span>
+            </div>
+            
+            <div class="mb-3" style="font-size: 0.85rem;">
+                <div class="row mb-2">
+                    <div class="col-5 fw-semibold">Submitted:</div>
+                    <div class="col-7 text-muted">{{ pending_request.created_at|date:"M d, Y H:i" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5 fw-semibold">Duration:</div>
+                    <div class="col-7 text-muted">{{ pending_request.months }} month(s)</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5 fw-semibold">Amount:</div>
+                    <div class="col-7 text-success fw-bold">{{ pending_request.amount_tzs|floatformat:0 }} TZS</div>
+                </div>
+                {% if pending_request.payment_method %}
+                <div class="row mb-2">
+                    <div class="col-5 fw-semibold">Payment Method:</div>
+                    <div class="col-7 text-muted">{{ pending_request.get_payment_method_display }}</div>
+                </div>
+                {% endif %}
+                {% if pending_request.reference_note %}
+                <div class="row mb-2">
+                    <div class="col-5 fw-semibold">Reference:</div>
+                    <div class="col-7 text-muted">{{ pending_request.reference_note }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if pending_request.staff_comment %}
+            <div class="alert alert-warning mb-3 p-2" style="font-size: 0.85rem; background-color: #fff3cd; border-left: 4px solid #ffc107;">
+                <strong><i class="bi bi-chat-dots me-2"></i>Admin Comment:</strong><br>
+                {{ pending_request.staff_comment }}
+            </div>
+            {% endif %}
+
+            <div class="alert alert-info mb-0" style="font-size: 0.85rem;">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>What's next?</strong><br>
+                Our staff team will review your payment request and verify your payment. You'll be notified once it's approved.
+            </div>
+        </div>
+    </div>
+    {% elif recent_declined %}
+    <!-- Declined Request Prominent Display -->
+    <div class="text-center mb-3">
+        <div class="mb-2">
+            <i class="bi bi-x-circle" style="font-size: 3rem; color: #dc3545;"></i>
+        </div>
+        <h3 class="fw-bold mb-1" style="font-size: 1.5rem;">Request Declined</h3>
+        <p class="text-muted mb-0" style="font-size: 0.9rem;">Your recent payment request was declined</p>
+    </div>
+
+    <div class="card shadow-sm border-danger mb-3" style="border-width: 2px;">
+        <div class="card-body p-4">
+            <div class="text-center mb-3">
+                <span class="badge bg-danger px-3 py-2" style="font-size: 0.9rem;">
+                    <i class="bi bi-x-circle me-1"></i>Declined
+                </span>
+            </div>
+            
+            <div class="mb-3" style="font-size: 0.85rem;">
+                <div class="row mb-2">
+                    <div class="col-5 fw-semibold">Submitted:</div>
+                    <div class="col-7 text-muted">{{ recent_declined.created_at|date:"M d, Y H:i" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5 fw-semibold">Duration:</div>
+                    <div class="col-7 text-muted">{{ recent_declined.months }} month(s)</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-5 fw-semibold">Amount:</div>
+                    <div class="col-7 text-muted">{{ recent_declined.amount_tzs|floatformat:0 }} TZS</div>
+                </div>
+            </div>
+
+            {% if recent_declined.staff_comment %}
+            <div class="alert alert-danger mb-3 p-2" style="font-size: 0.85rem; background-color: #f8d7da; border-left: 4px solid #dc3545;">
+                <strong><i class="bi bi-exclamation-triangle me-2"></i>Admin Comment:</strong><br>
+                {{ recent_declined.staff_comment }}
+            </div>
+            {% else %}
+            <div class="alert alert-danger mb-3 p-2" style="font-size: 0.85rem; background-color: #f8d7da; border-left: 4px solid #dc3545;">
+                <strong><i class="bi bi-exclamation-triangle me-2"></i>This request was declined.</strong><br>
+                Please check your payment details and submit a new request or contact support for assistance.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Payment Request History -->
+    {% if all_requests|length > 1 %}
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body p-3">
+            <h6 class="fw-semibold mb-3" style="font-size: 0.95rem;">
+                <i class="bi bi-clock-history me-2"></i>Payment Request History
+            </h6>
+            <div style="max-height: 300px; overflow-y: auto;">
+                {% for req in all_requests %}
+                <div class="border rounded p-2 mb-2 {% if req.status == 'declined' %}border-danger bg-light{% elif req.status == 'approved' %}border-success{% else %}border-warning{% endif %}" style="font-size: 0.85rem;">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <strong>{{ req.created_at|date:"M d, Y H:i" }}</strong>
+                            <span class="badge ms-2 {% if req.status == 'approved' %}bg-success{% elif req.status == 'declined' %}bg-danger{% else %}bg-warning{% endif %}" style="font-size: 0.75rem;">
+                                {{ req.status|title }}
+                            </span>
+                        </div>
+                        <div class="text-end">
+                            {% if req.months %}
+                            <div class="fw-bold text-success">{{ req.amount_tzs|floatformat:0 }} TZS</div>
+                            <small class="text-muted">{{ req.months }} month(s)</small>
+                            {% else %}
+                            <div class="text-muted">Free Trial</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if req.staff_comment %}
+                    <div class="alert alert-warning mt-2 mb-0 p-2" style="font-size: 0.8rem; background-color: #fff3cd; border-left: 3px solid #ffc107;">
+                        <strong><i class="bi bi-chat-dots me-1"></i>Admin Comment:</strong><br>
+                        {{ req.staff_comment }}
+                    </div>
+                    {% endif %}
+                    {% if req.status == 'declined' %}
+                    <div class="alert alert-danger mt-2 mb-0 p-2" style="font-size: 0.8rem; background-color: #f8d7da; border-left: 3px solid #dc3545;">
+                        <strong><i class="bi bi-exclamation-triangle me-1"></i>This request was declined.</strong>
+                        {% if not req.staff_comment %}
+                        Please check your payment details and submit a new request or contact support.
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="d-grid gap-2 mb-3">
+                <button type="button" class="btn btn-outline-secondary btn-lg fw-semibold"
+                style="font-size: 0.9rem; max-width: 100%; margin: 0 auto; width: 90%;"
+                onclick="document.getElementById('submit-new-form').style.display='block'; this.style.display='none'; document.getElementById('submit-new-form').scrollIntoView({behavior: 'smooth'});">
+            <i class="bi bi-plus-circle me-2"></i>Submit New Request
+        </button>
+    </div>
+
+    {% endif %}
+
+    <!-- Subscription Form (Hidden if pending request exists) -->
+    <div id="subscription-form-section" {% if pending_request %}style="display: none;"{% endif %}>
+        <div class="text-center mb-3">
+            <div class="mb-2">
+                <i class="bi bi-credit-card" style="font-size: 2.5rem; color: {% if primary_color %}{{ primary_color }}{% else %}#7492b9{% endif %};"></i>
+            </div>
+            <h3 class="fw-bold mb-1" style="font-size: 1.5rem;">Renew Your Subscription</h3>
+            <p class="text-muted mb-0" style="font-size: 0.9rem;">Subscribe to continue using the platform</p>
+        </div>
+
+        <!-- Payment Info Card -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body p-3">
+                <div class="text-center mb-3">
+                    <div class="mb-2 d-flex justify-content-center">
+                        <img src="{% static 'images/mpesa-logo.png' %}" alt="M-Pesa" class="img-fluid" style="max-width: 120px; height: auto;">
+                    </div>
+                    <div class="alert alert-success d-inline-block px-3 py-2 mb-0" style="font-size: 0.85rem;">
+                        <strong>LIPA NAMBA:</strong> <span class="fs-6 fw-bold">{{ pay_number }}</span>
+                        <span class="text-muted ms-2" style="font-size: 0.8rem;"><strong>NAME:</strong> MIPT SOFTWARES</span>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <p class="mb-1" style="font-size: 0.85rem; color: #666;">
+                        <strong>{{ base_price|floatformat:0 }} TZS</strong>/month
+                        <span class="badge bg-success ms-1" style="font-size: 0.75rem;">{{ category_discount }}% off first month</span>
+                    </p>
+                    <p class="text-muted mb-0" style="font-size: 0.8rem;">
+                        it might take upto 5 minutes to confirm your request
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscription Form -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body p-3">
+                <form method="POST" id="subscription-form">
+                    {% csrf_token %}
+                    
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label for="months" class="form-label fw-semibold" style="font-size: 0.9rem;">Number of Months</label>
+                            <input type="number" id="months" name="months" value="1" min="1" max="12" 
+                                   class="form-control" placeholder="1" style="font-size: 0.9rem;" required>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                Minimum 1 month
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size: 0.9rem;">Amount to Pay</label>
+                            <div id="amount_display" class="form-control bg-light fw-bold text-success border-0" style="font-size: 0.9rem;">
+                                0 TZS
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border mb-2" style="font-size: 0.8rem; padding: 0.5rem;">
+                        <div id="amount_breakdown" class="text-muted">Enter months to see breakdown</div>
+                    </div>
+
+                    <!-- Payment Method and Amount Sent -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label for="payment_method" class="form-label fw-semibold" style="font-size: 0.9rem;">Payment Method</label>
+                            <select id="payment_method" name="payment_method" class="form-select" style="font-size: 0.9rem;" required>
+                                <option value="mobile_payment" selected>Mobile Payment</option>
+                                <option value="wakala">Wakala/Agent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="amount_sent" class="form-label fw-semibold" style="font-size: 0.9rem;">Amount Sent</label>
+                            <input type="number" id="amount_sent" name="amount_sent" class="form-control" 
+                                   placeholder="Enter amount" style="font-size: 0.9rem;" required>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                Amount you actually sent
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="payment_reference" class="form-label fw-semibold" style="font-size: 0.9rem;">Payment Reference</label>
+                        <input type="text" id="payment_reference" name="payment_reference" 
+                               class="form-control" 
+                               placeholder="Phone number, name, or M-Pesa reference" 
+                               style="font-size: 0.9rem;" required>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                            Required for faster verification
+                        </small>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-lg fw-semibold" 
+                                style="background-color: {% if primary_color %}{{ primary_color }}{% else %}#7492b9{% endif %}; 
+                                       color: white; border: none; font-size: 0.9rem; max-width: 100%; margin: 0 auto; width: 90%;"
+                                data-bs-toggle="modal" data-bs-target="#payment-preview-modal">
+                            <i class="bi bi-check2-circle me-2"></i>Submit Request
+                        </button>
+                    </div>
+                    
+                    <!-- Hidden submit button for modal -->
+                    <button type="submit" name="action" value="subscribe" id="submit-subscription" style="display: none;"></button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Center Card -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body p-3">
+                <h6 class="fw-semibold mb-2" style="font-size: 0.9rem;">
+                    <i class="bi bi-headset me-2"></i>Need Help?
+                </h6>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="https://wa.me/255614021404" target="_blank" 
+                       class="btn btn-success btn-sm" style="font-size: 0.8rem; flex: 1;">
+                        <i class="bi bi-whatsapp me-1"></i>WhatsApp
+                    </a>
+                    <a href="mailto:kodinsoftwares@gmail.com" 
+                       class="btn btn-outline-primary btn-sm" style="font-size: 0.8rem; flex: 1;">
+                        <i class="bi bi-envelope me-1"></i>Email
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div class="text-center mb-3">
+            <a href="{% url 'tracker:dashboard' org_slug=organization.slug %}" 
+               class="text-muted text-decoration-none" style="font-size: 0.85rem;">
+                <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Hidden form section for new request after pending -->
+    <div id="submit-new-form" style="display: none;">
+        <div class="text-center mb-3">
+            <h4 class="fw-bold mb-2" style="font-size: 1.3rem;">Submit New Request</h4>
+            <p class="text-muted mb-3" style="font-size: 0.85rem;">This will be a separate request from your pending one</p>
+        </div>
+        
+        <!-- Payment Info Reminder -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body p-2">
+                <div class="text-center">
+                    <div class="mb-2 d-flex justify-content-center">
+                        <img src="{% static 'images/mpesa-logo.png' %}" alt="M-Pesa" class="img-fluid" style="max-width: 100px; height: auto;">
+                    </div>
+                    <div class="alert alert-success d-inline-block px-3 py-2 mb-0" style="font-size: 0.8rem;">
+                        <strong>LIPA NAMBA:</strong> <span class="fs-6 fw-bold">{{ pay_number }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- New Request Form -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body p-3">
+                <form method="POST" id="new-request-form">
+                    {% csrf_token %}
+                    
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label for="months2" class="form-label fw-semibold" style="font-size: 0.9rem;">Number of Months</label>
+                            <input type="number" id="months2" name="months" value="1" min="1" max="12" 
+                                   class="form-control" placeholder="1" style="font-size: 0.9rem;" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size: 0.9rem;">Amount to Pay</label>
+                            <div id="amount_display2" class="form-control bg-light fw-bold text-success border-0" style="font-size: 0.9rem;">0 TZS</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border mb-2" style="font-size: 0.8rem; padding: 0.5rem;">
+                        <div id="amount_breakdown2" class="text-muted">Enter months to see breakdown</div>
+                    </div>
+                    
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label for="payment_method2" class="form-label fw-semibold" style="font-size: 0.9rem;">Payment Method</label>
+                            <select id="payment_method2" name="payment_method" class="form-select" style="font-size: 0.9rem;" required>
+                                <option value="mobile_payment" selected>Mobile Payment</option>
+                                <option value="wakala">Wakala/Agent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="amount_sent2" class="form-label fw-semibold" style="font-size: 0.9rem;">Amount Sent</label>
+                            <input type="number" id="amount_sent2" name="amount_sent" class="form-control" 
+                                   placeholder="Enter amount" style="font-size: 0.9rem;" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="payment_reference2" class="form-label fw-semibold" style="font-size: 0.9rem;">Payment Reference</label>
+                        <input type="text" id="payment_reference2" name="payment_reference" class="form-control" style="font-size: 0.9rem;" required>
+                    </div>
+                    <button type="submit" name="action" value="subscribe" 
+                            class="btn btn-lg fw-semibold w-100"
+                            style="background-color: {% if primary_color %}{{ primary_color }}{% else %}#7492b9{% endif %}; 
+                                   color: white; border: none; font-size: 0.9rem;">
+                        <i class="bi bi-check2-circle me-2"></i>Submit New Request
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal fade" id="payment-preview-modal" tabindex="-1" aria-labelledby="payment-preview-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h6 class="modal-title fw-semibold" id="payment-preview-modal-label" style="font-size: 0.95rem;">Confirm Payment Details</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="font-size: 0.85rem;">
+                    <div class="mb-2">
+                        <strong>Payment Method:</strong>
+                        <div id="preview_payment_method" class="text-muted"></div>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Payment Reference:</strong>
+                        <div id="preview_payment_reference" class="text-muted"></div>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Amount Sent:</strong>
+                        <div id="preview_amount_sent" class="text-success fw-bold"></div>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Months:</strong>
+                        <div id="preview_months" class="text-muted"></div>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Total Amount:</strong>
+                        <div id="preview_total" class="text-success fw-bold"></div>
+                    </div>
+                    <div class="alert alert-info mb-0" style="font-size: 0.8rem; padding: 0.5rem;">
+                        Please verify all details before submitting.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="font-size: 0.85rem;">Cancel</button>
+                    <button type="button" class="btn btn-sm" 
+                            style="background-color: {% if primary_color %}{{ primary_color }}{% else %}#7492b9{% endif %}; 
+                                   color: white; border: none; font-size: 0.85rem;"
+                            onclick="document.getElementById('submit-subscription').click();">
+                        Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function(){
+        const basePrice = {{ base_price }};
+        const discount = {{ category_discount }};
+        
+        function formatTZS(n){
+            try { return new Intl.NumberFormat('en-US').format(n); } catch(e){ return n.toString(); }
+        }
+        
+        function calculateAmount(monthsInput, amountDisplay, breakdownDisplay) {
+            let raw = monthsInput.value;
+            let m = parseInt(raw === '' ? '0' : raw, 10);
+            if(isNaN(m) || m < 1) m = 1;
+            if(m > 12) m = 12;
+            
+            amountDisplay.classList.remove('text-muted');
+            amountDisplay.classList.add('text-success');
+            
+            const firstMonth = m >= 1 ? basePrice * (100 - discount) / 100 : 0;
+            const rest = m >= 2 ? basePrice * (m - 1) : 0;
+            const total = Math.round((firstMonth + rest) * 100) / 100;
+            
+            amountDisplay.textContent = formatTZS(total) + ' TZS';
+            
+            if (breakdownDisplay && m >= 1) {
+                breakdownDisplay.innerHTML = `<strong>First month:</strong> ${formatTZS(firstMonth)} TZS (${discount}% discount)` + 
+                    (m > 1 ? ` | <strong>Next ${m - 1} month(s):</strong> ${formatTZS(rest)} TZS` : '');
+            }
+        }
+        
+        // Main form handlers
+        const monthsInput = document.getElementById('months');
+        const amountEl = document.getElementById('amount_display');
+        const breakdownEl = document.getElementById('amount_breakdown');
+        const paymentMethod = document.getElementById('payment_method');
+        const paymentReference = document.getElementById('payment_reference');
+        const amountSent = document.getElementById('amount_sent');
+        
+        if (monthsInput && amountEl) {
+            monthsInput.addEventListener('input', function() {
+                calculateAmount(monthsInput, amountEl, breakdownEl);
+            });
+            calculateAmount(monthsInput, amountEl, breakdownEl);
+        }
+        
+        // New request form handlers (months2)
+        const monthsInput2 = document.getElementById('months2');
+        const amountEl2 = document.getElementById('amount_display2');
+        const breakdownEl2 = document.getElementById('amount_breakdown2');
+        
+        if (monthsInput2 && amountEl2) {
+            monthsInput2.addEventListener('input', function() {
+                calculateAmount(monthsInput2, amountEl2, breakdownEl2);
+            });
+            calculateAmount(monthsInput2, amountEl2, breakdownEl2);
+        }
+        
+        function previewPayment(){
+            const method = paymentMethod || document.getElementById('payment_method2');
+            const reference = paymentReference || document.getElementById('payment_reference2');
+            const sent = amountSent || document.getElementById('amount_sent2');
+            const months = monthsInput || document.getElementById('months2');
+            
+            if (!method) return;
+            
+            document.getElementById('preview_payment_method').textContent = method.options[method.selectedIndex].text;
+            document.getElementById('preview_payment_reference').textContent = reference.value || '—';
+            document.getElementById('preview_amount_sent').textContent = (sent.value || '0') + ' TZS';
+            const monthsVal = months.value || '1';
+            document.getElementById('preview_months').textContent = monthsVal + ' month(s)';
+            
+            let raw = months.value;
+            let m = parseInt(raw === '' ? '1' : raw, 10);
+            if(isNaN(m) || m < 1) m = 1;
+            if(m > 12) m = 12;
+            
+            const firstMonth = m >= 1 ? basePrice * (100 - discount) / 100 : 0;
+            const rest = m >= 2 ? basePrice * (m - 1) : 0;
+            const total = Math.round((firstMonth + rest) * 100) / 100;
+            document.getElementById('preview_total').textContent = formatTZS(total) + ' TZS';
+        }
+        
+        if (paymentMethod) {
+            paymentMethod.addEventListener('change', previewPayment);
+            if (paymentReference) paymentReference.addEventListener('input', previewPayment);
+            if (amountSent) amountSent.addEventListener('input', previewPayment);
+        }
+        
+        const previewBtn = document.querySelector('[data-bs-toggle="modal"]');
+        if (previewBtn) previewBtn.addEventListener('click', previewPayment);
+    })();
+</script>
+{% endblock %}
+

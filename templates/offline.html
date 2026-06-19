@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Offline - Mission Offering Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .offline-container {
+        min-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .offline-icon {
+        font-size: 5rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+    
+    .offline-title {
+        font-size: 2rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 1rem;
+    }
+    
+    .offline-message {
+        font-size: 1.1rem;
+        color: #6b7280;
+        margin-bottom: 2rem;
+        max-width: 500px;
+    }
+    
+    .retry-btn {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .retry-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    
+    .cached-pages {
+        margin-top: 2rem;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 8px;
+        max-width: 400px;
+    }
+    
+    .cached-pages h4 {
+        font-size: 1rem;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+    
+    .cached-pages ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .cached-pages li {
+        padding: 0.25rem 0;
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="offline-container">
+    <div class="offline-icon">📱</div>
+    <h1 class="offline-title">You're Offline</h1>
+    <p class="offline-message">
+        It looks like you've lost your internet connection. 
+        Don't worry - you can still access previously loaded pages and view your data.
+    </p>
+    
+    <button class="retry-btn" onclick="window.location.reload()">
+        <i class="bi bi-arrow-clockwise me-2"></i>Try Again
+    </button>
+    
+    <div class="cached-pages">
+        <h4>Available Offline:</h4>
+        <ul>
+            <li>✓ Dashboard</li>
+            <li>✓ Member Details</li>
+            <li>✓ Admin Log</li>
+            <li>✓ Daily Collection</li>
+            <li>✓ Add Member</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Check connection status
+function checkConnection() {
+    if (navigator.onLine) {
+        window.location.reload();
+    }
+}
+
+// Listen for online event
+window.addEventListener('online', checkConnection);
+
+// Check connection every 5 seconds
+setInterval(checkConnection, 5000);
+</script>
+{% endblock %} 

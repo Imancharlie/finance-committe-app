@@ -1,0 +1,209 @@
+{% extends "bossin_admin/base.html" %}
+{% load static %}
+{% load custom_filters %}
+{% load humanize %}
+
+{% block title %}Subscription Requests - Bossin Admin Portal{% endblock %}
+
+{% block admin_content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1"><i class="bi bi-credit-card me-2"></i>Subscription Requests</h1>
+        <p class="text-muted mb-0">Manage payment and subscription requests</p>
+    </div>
+    <div class="d-flex gap-2">
+        <span class="badge bg-warning">{{ pending_count }} Pending</span>
+        <span class="badge bg-success">{{ approved_count }} Approved</span>
+        <span class="badge bg-danger">{{ declined_count }} Declined</span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="admin-card mb-4">
+    <form method="get" class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Search</label>
+            <input type="text" name="search" class="form-control" placeholder="Organization name or reference..." value="{{ search }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="declined" {% if status_filter == 'declined' %}selected{% endif %}>Declined</option>
+                <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <div>
+                <button type="submit" class="btn btn-admin w-100">Filter</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Requests Table -->
+<div class="admin-card">
+    <div class="table-responsive">
+        <table class="table table-hover admin-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Organization</th>
+                    <th>Months</th>
+                    <th>Amount</th>
+                    <th class="d-none d-md-table-cell">Payment Method</th>
+                    <th class="d-none d-lg-table-cell">Reference</th>
+                    <th>Status</th>
+                    <th class="action-column">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr {% if req.status == 'pending' %}onclick="showRequestActions({{ req.id }})" style="cursor: pointer;"{% endif %}>
+                    <td>
+                        <small>{{ req.created_at|date:"M d" }}</small><br>
+                        <small class="text-muted">{{ req.created_at|date:"H:i" }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ req.organization.name|truncatewords:3 }}</strong><br>
+                        <small class="text-muted">{{ req.submitted_by.username }}</small>
+                    </td>
+                    <td>
+                        {% if req.is_trial %}
+                            <span class="badge bg-info">Trial</span>
+                        {% else %}
+                            {{ req.months }}m
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ req.amount_tzs|intcomma }} TZS</strong>
+                        {% if req.discount_percent %}
+                            <br><small class="text-success">{{ req.discount_percent }}%</small>
+                        {% endif %}
+                    </td>
+                    <td class="d-none d-md-table-cell">
+                        {% if req.payment_method %}
+                            <small>{{ req.get_payment_method_display }}</small>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="d-none d-lg-table-cell">
+                        <small>{{ req.reference_note|default:"-"|truncatewords:5 }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-{% if req.status == 'approved' %}success{% elif req.status == 'declined' %}danger{% else %}warning{% endif %}">
+                            {{ req.status|title }}
+                        </span>
+                    </td>
+                    <td class="action-column">
+                        {% if req.status == 'pending' %}
+                        <div class="btn-group btn-group-sm">
+                            <form method="post" action="{% url 'bossin_admin:subscription_approve' req.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm" onclick="event.stopPropagation(); return confirm('Approve this payment request?');" title="Approve">
+                                    <i class="bi bi-check"></i><span class="d-none d-lg-inline ms-1">Approve</span>
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'bossin_admin:subscription_decline' req.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); return confirm('Decline this payment request?');" title="Decline">
+                                    <i class="bi bi-x"></i><span class="d-none d-lg-inline ms-1">Decline</span>
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <span class="text-muted">Processed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        No payment requests found
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if requests.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if requests.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ requests.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">Previous</a>
+            </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">Page {{ requests.number }} of {{ requests.paginator.num_pages }}</span>
+            </li>
+            
+            {% if requests.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ requests.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Mobile Action Modal for Subscription Requests -->
+<div class="modal fade" id="requestActionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Payment Request Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="requestActionContent">
+                <!-- Actions will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showRequestActions(requestId) {
+    // Find the request row
+    const row = event.target.closest('tr');
+    const approveForm = row.querySelector('form[action*="approve"]');
+    const declineForm = row.querySelector('form[action*="decline"]');
+    
+    if (approveForm && declineForm) {
+        // Get CSRF token from page
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         document.querySelector('input[name="csrfmiddlewaretoken"]')?.value ||
+                         '{{ csrf_token }}';
+        
+        const modalContent = document.getElementById('requestActionContent');
+        modalContent.innerHTML = `
+            <div class="d-grid gap-2">
+                <form method="post" action="${approveForm.action}">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <button type="submit" class="btn btn-success w-100" onclick="return confirm('Approve this payment request?');">
+                        <i class="bi bi-check"></i> Approve Request
+                    </button>
+                </form>
+                <form method="post" action="${declineForm.action}">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Decline this payment request?');">
+                        <i class="bi bi-x"></i> Decline Request
+                    </button>
+                </form>
+            </div>
+        `;
+        const modal = new bootstrap.Modal(document.getElementById('requestActionModal'));
+        modal.show();
+    }
+}
+</script>
+{% endblock %}
+

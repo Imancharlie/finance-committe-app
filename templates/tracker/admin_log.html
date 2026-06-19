@@ -1,0 +1,524 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Admin Log - Transaction History{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Compact header */
+    .compact-header {
+        margin-bottom: 1rem;
+    }
+
+    .compact-header h1 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+
+    .compact-header p {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .compact-header .btn {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    /* Filter card */
+    .compact-card .card-header {
+        padding: 0.75rem 1rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .compact-card .card-header h5 {
+        font-size: 0.9rem;
+        margin-bottom: 0;
+        font-weight: 600;
+    }
+
+    .compact-card .card-body {
+        padding: 1rem;
+    }
+
+    /* Filter form styling */
+    .compact-search .form-control,
+    .compact-search .form-select {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.4rem;
+        border-radius: 4px;
+        height: auto;
+    }
+
+    .compact-search .form-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+        color: #495057;
+    }
+
+    .compact-search .btn {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.6rem;
+    }
+
+    /* Table styling */
+    .compact-table {
+        font-size: 0.75rem;
+        margin-bottom: 0;
+    }
+
+    .compact-table th,
+    .compact-table td {
+        padding: 0.4rem 0.3rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .compact-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    .compact-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .compact-table .amount-display {
+        font-size: 0.75rem;
+        white-space: nowrap;
+        font-weight: 600;
+        font-family: 'Courier New', monospace;
+    }
+
+    .compact-table .member-name-link {
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-decoration: none;
+        color: #007bff;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+    }
+
+    .compact-table .member-name-link:hover {
+        text-decoration: underline;
+        color: #0056b3;
+    }
+
+    .compact-table thead th {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.6rem 0.4rem;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Badge styling */
+    .compact-table .badge {
+        font-size: 0.65rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    /* Action buttons */
+    .compact-table .btn-sm {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.65rem;
+    }
+
+    /* Transaction note */
+    .transaction-note {
+        font-size: 0.7rem;
+        color: #6c757d;
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .compact-header h1 {
+            font-size: 1.1rem;
+        }
+
+        .compact-header p {
+            font-size: 0.75rem;
+        }
+
+        .compact-card .card-header h5 {
+            font-size: 0.85rem;
+        }
+
+        .compact-table {
+            font-size: 0.7rem;
+        }
+
+        .compact-table th,
+        .compact-table td {
+            padding: 0.4rem 0.3rem;
+        }
+
+        .compact-search .form-control,
+        .compact-search .form-select,
+        .compact-search .btn {
+            font-size: 0.7rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .compact-header h1 {
+            font-size: 1rem;
+        }
+
+        .compact-header p {
+            font-size: 0.7rem;
+        }
+
+        .compact-card .card-header h5 {
+            font-size: 0.8rem;
+        }
+
+        .compact-table {
+            font-size: 0.65rem;
+        }
+
+        .compact-table th,
+        .compact-table td {
+            padding: 0.3rem 0.2rem;
+        }
+
+        .transaction-note {
+            max-width: 100px;
+        }
+    }
+
+    /* Reduce export icon sizes in member edit log */
+    .card-header .btn-sm i {
+        font-size: 0.75rem !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 compact-header">
+    <div>
+        <h1 class="mb-1">Admin Log</h1>
+        <p class="mb-0">All transactions entered by committee members</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'tracker:export_admin_log_excel' org_slug=tenant.slug %}" class="btn btn-sm btn-success" title="Export Transaction History to Excel">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel
+        </a>
+        <a href="{% url 'tracker:export_admin_log_pdf' org_slug=tenant.slug %}" class="btn btn-sm btn-danger" title="Export Transaction History to PDF">
+            <i class="bi bi-file-pdf me-1"></i>PDF
+        </a>
+       
+    </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="card compact-card">
+    <div class="card-header">
+        <h5 class="mb-0">Transaction History</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 compact-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Member</th>
+                        <th>Amount</th>
+                        <th>Added By</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.date|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'tracker:member_detail' member_id=transaction.member.id org_slug=tenant.slug %}" class="member-name-link">
+                                {{ transaction.member.name }}
+                            </a>
+                        </td>
+                        <td class="amount-display">TZS {{ transaction.amount|intcomma }}</td>
+                        <td>
+                            <span class="badge bg-primary">{{ transaction.added_by.username }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ transaction.member.username }}</span>
+                                {{ transaction.note|default:"-" }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="bi bi-journal-text" style="font-size: 2rem;"></i>
+                                <p class="mt-2 mb-0">No transactions found</p>
+                                {% if boss_filter or date_filter or amount_filter %}
+                                    <p class="small">Try adjusting your filters</p>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Transaction pagination" class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if boss_filter %}&boss={{ boss_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if amount_filter %}&amount={{ amount_filter }}{% endif %}">
+                    <i class="bi bi-chevron-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if boss_filter %}&boss={{ boss_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if amount_filter %}&amount={{ amount_filter }}{% endif %}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if boss_filter %}&boss={{ boss_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if amount_filter %}&amount={{ amount_filter }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if boss_filter %}&boss={{ boss_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if amount_filter %}&amount={{ amount_filter }}{% endif %}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if boss_filter %}&boss={{ boss_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if amount_filter %}&amount={{ amount_filter }}{% endif %}">
+                    <i class="bi bi-chevron-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Member Edit Log Section (Owner Only) -->
+{% if is_owner %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0" style="font-size: 0.95rem;">
+                    <i class="bi bi-pencil-square me-2"></i>Member Edit Log
+                </h6>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'tracker:export_member_edit_log_excel' org_slug=tenant.slug %}" class="btn btn-sm btn-success" title="Export Member Edit Log to Excel">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel
+                    </a>
+                    <a href="{% url 'tracker:export_member_edit_log_pdf' org_slug=tenant.slug %}" class="btn btn-sm btn-danger" title="Export Member Edit Log to PDF">
+                        <i class="bi bi-file-pdf me-1"></i>PDF
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Filter Section -->
+            <div class="card-body bg-light border-bottom">
+                <form method="get" class="row g-2">
+                    <div class="col-md-4">
+                        <input type="text" name="edit_member" class="form-control form-control-sm" 
+                               placeholder="Filter by member name" value="{{ edit_member_filter }}">
+                    </div>
+                    <div class="col-md-4">
+                        <select name="edit_field" class="form-select form-select-sm">
+                            <option value="">All Fields</option>
+                            <option value="name" {% if edit_field_filter == 'name' %}selected{% endif %}>Name</option>
+                            <option value="phone" {% if edit_field_filter == 'phone' %}selected{% endif %}>Phone</option>
+                            <option value="year" {% if edit_field_filter == 'year' %}selected{% endif %}>Year</option>
+                            <option value="paid_total" {% if edit_field_filter == 'paid_total' %}selected{% endif %}>Paid Amount</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="bi bi-search me-1"></i>Filter
+                        </button>
+                        <a href="{% url 'tracker:admin_log' org_slug=tenant.slug %}" class="btn btn-sm btn-secondary">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 compact-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Member</th>
+                            <th>Field Changed</th>
+                            <th>Before</th>
+                            <th>After</th>
+                            <th>Done By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in member_edit_logs %}
+                        <tr>
+                            <td>
+                                <small class="text-muted">{{ log.created_at|date:"M d, Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'tracker:member_detail' member_id=log.member.id org_slug=tenant.slug %}" class="member-name-link">
+                                    {{ log.member.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    {% if log.field_changed == 'name' %}Name
+                                    {% elif log.field_changed == 'phone' %}Phone
+                                    {% elif log.field_changed == 'year' %}Year
+                                    {% elif log.field_changed == 'paid_total' %}Paid Amount
+                                    {% else %}{{ log.field_changed }}{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <code class="text-muted">{{ log.before_value|default:"-" }}</code>
+                            </td>
+                            <td>
+                                <code class="text-success">{{ log.after_value|default:"-" }}</code>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ log.edited_by.username }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                    <p class="mt-2 mb-0">No member edits recorded yet</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if member_edit_logs.has_other_pages %}
+            <nav aria-label="Member edit log pagination" class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center">
+                    {% if member_edit_logs.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?edit_page=1{% if edit_member_filter %}&edit_member={{ edit_member_filter }}{% endif %}{% if edit_field_filter %}&edit_field={{ edit_field_filter }}{% endif %}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?edit_page={{ member_edit_logs.previous_page_number }}{% if edit_member_filter %}&edit_member={{ edit_member_filter }}{% endif %}{% if edit_field_filter %}&edit_field={{ edit_field_filter }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% for num in member_edit_logs.paginator.page_range %}
+                        {% if member_edit_logs.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > member_edit_logs.number|add:'-3' and num < member_edit_logs.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?edit_page={{ num }}{% if edit_member_filter %}&edit_member={{ edit_member_filter }}{% endif %}{% if edit_field_filter %}&edit_field={{ edit_field_filter }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if member_edit_logs.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?edit_page={{ member_edit_logs.next_page_number }}{% if edit_member_filter %}&edit_member={{ edit_member_filter }}{% endif %}{% if edit_field_filter %}&edit_field={{ edit_field_filter }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?edit_page={{ member_edit_logs.paginator.num_pages }}{% if edit_member_filter %}&edit_member={{ edit_member_filter }}{% endif %}{% if edit_field_filter %}&edit_field={{ edit_field_filter }}{% endif %}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Success/Error Messages Display -->
+{% if messages %}
+<div class="mt-3">
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {% if message.tags == 'success' %}
+                <i class="bi bi-check-circle me-2"></i>
+            {% elif message.tags == 'error' %}
+                <i class="bi bi-exclamation-triangle me-2"></i>
+            {% elif message.tags == 'warning' %}
+                <i class="bi bi-exclamation-triangle me-2"></i>
+            {% else %}
+                <i class="bi bi-info-circle me-2"></i>
+            {% endif %}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, 5000);
+});
+</script>
+{% endblock %} 
