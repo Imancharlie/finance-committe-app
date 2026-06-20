@@ -957,10 +957,10 @@ class ExportTransactionsExcelAPIView(TenantMixin, APIView):
         # Add data
         for row_num, txn in enumerate(transactions_qs, 5):
             ws.cell(row=row_num, column=1, value=txn.date.strftime('%Y-%m-%d'))
-            ws.cell(row=row_num, column=2, value=txn.member_name)
+            ws.cell(row=row_num, column=2, value=txn.member.name if txn.member else 'N/A')
             ws.cell(row=row_num, column=3, value=float(txn.amount))
             ws.cell(row=row_num, column=4, value=txn.note or '')
-            ws.cell(row=row_num, column=5, value=txn.added_by_username)
+            ws.cell(row=row_num, column=5, value=txn.added_by.username if txn.added_by else 'N/A')
             ws.cell(row=row_num, column=6, value=txn.created_at.strftime('%Y-%m-%d %H:%M'))
 
             # Add borders to data cells
@@ -1003,80 +1003,142 @@ class ExportReportPDFAPIView(TenantMixin, APIView):
         # Get stats
         stats = get_dashboard_stats(request.tenant, members_qs)
 
-        # Create PDF
+        # Create PDF with proper margins
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{request.tenant.slug}_report_{date.today().strftime("%Y%m%d")}.pdf"'
 
-        doc = SimpleDocTemplate(response, pagesize=letter)
+        doc = SimpleDocTemplate(
+            response,
+            pagesize=letter,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=120,
+            bottomMargin=60
+        )
         elements = []
         styles = getSampleStyleSheet()
 
+        # Custom title style
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            spaceAfter=30,
+            alignment=1,  # Center alignment
+            textColor=colors.HexColor('#2c3e50')
+        )
+
+        # Filter style
+        filter_style = ParagraphStyle(
+            'FilterStyle',
+            parent=styles['Normal'],
+            fontSize=12,
+            spaceAfter=20,
+            alignment=1,  # Center alignment
+            textColor=colors.HexColor('#7f8c8d')
+        )
+
+        # Dynamic title based on filters
+        base_title = f"MEMBERS REPORT: {request.tenant.name.upper()}"
+
+        # Add filter information to title
+        filter_info = []
+        if filter_status:
+            filter_map = {
+                'incomplete': 'INCOMPLETE PAYMENTS',
+                'complete': 'COMPLETE PAYMENTS',
+                'pledged': 'PLEDGED ABOVE TSh 70,000',
+                'not_started': 'NOT STARTED',
+                'exceeded': 'EXCEEDED PLEDGES'
+            }
+            filter_info.append(filter_map.get(filter_status, filter_status.upper()))
+
+        if search:
+            filter_info.append(f'SEARCH: "{search.upper()}"')
+
+        if filter_info:
+            title_text = f"{base_title}<br/><font size='14' color='#e74c3c'>({' - '.join(filter_info)})</font>"
+        else:
+            title_text = base_title
+
         # Title
-        title_style = styles['Title']
-        title_style.alignment = 1  # Center
-        title = Paragraph(f"{request.tenant.name} - Financial Report", title_style)
+        title = Paragraph(title_text, title_style)
         elements.append(title)
-        elements.append(Spacer(1, 12))
 
-        # Date
-        date_style = styles['Normal']
-        date_style.alignment = 1
-        date_para = Paragraph(f"Generated on {date.today().strftime('%B %d, %Y')}", date_style)
-        elements.append(date_para)
-        elements.append(Spacer(1, 24))
-
-        # Summary table
+        # Summary section (without report date)
         summary_data = [
-            ['Metric', 'Value'],
-            ['Total Pledged', f"TSh {float(stats['total_pledged']):,.2f}"],
-            ['Total Collected', f"TSh {float(stats['total_collected']):,.2f}"],
-            ['Target Amount', f"TSh {float(stats['target_amount']):,.2f}"],
-            ['Progress', f"{stats['progress_percentage']:.1f}%"],
-            ['Total Members', str(stats['member_count'])],
-            ['Complete', str(stats['complete_count'])],
-            ['Incomplete', str(stats['incomplete_count'])],
-            ['Not Started', str(stats['not_paid_count'])],
-            ['Exceeded', str(stats['exceeded_count'])],
+            ['SUMMARY', ''],
+            ['Total Members:', f"{stats['member_count']:,}"],
+            ['Total Pledged:', f"TSh {float(stats['total_pledged']):,.2f}"],
+            ['Total Collected:', f"TSh {float(stats['total_collected']):,.2f}"],
+            ['Target Amount:', f"TSh {float(stats['target_amount']):,.2f}"],
+            ['% Collected:', f"{stats['progress_percentage']:.1f}%"],
         ]
 
-        summary_table = Table(summary_data, colWidths=[2.5*inch, 3*inch])
+        summary_table = Table(summary_data, colWidths=[2*inch, 2*inch])
         summary_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#4472C4')),
-            ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (1, 0), 12),
-            ('BACKGROUND', (0, 1), (1, -1), colors.beige),
-            ('GRID', (0, 0), (1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498db')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ]))
+
         elements.append(summary_table)
-        elements.append(Spacer(1, 24))
+        elements.append(Spacer(1, 20))
 
-        # Members table
-        members_data = [['Name', 'Pledge', 'Paid', 'Remaining', 'Status']]
-        for member in members_qs:
-            members_data.append([
-                member.name,
-                f"TSh {float(member.pledge):,.0f}",
-                f"TSh {float(member.paid_total):,.0f}",
-                f"TSh {float(member.remaining):,.0f}",
-                member.status_display,
-            ])
+        # Members table with proper styling
+        if members_qs:
+            # Table headers with index number
+            headers = ['#', 'Name', 'Phone', 'Pledge', 'Paid', 'Exceed/Remain(-)', 'Status']
 
-        members_table = Table(members_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
-        members_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (4, 0), colors.HexColor('#4472C4')),
-            ('TEXTCOLOR', (0, 0), (4, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (4, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (4, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (4, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (4, 0), 12),
-            ('BACKGROUND', (0, 1), (4, -1), colors.beige),
-            ('GRID', (0, 0), (4, -1), 1, colors.black),
-            ('FONTSIZE', (0, 1), (4, -1), 9),
-        ]))
-        elements.append(members_table)
+            # Prepare data
+            table_data = [headers]
+
+            for index, member in enumerate(members_qs, 1):
+                pledge = member.pledge if member.pledge is not None else Decimal('70000.00')
+                paid = member.paid_total if member.paid_total is not None else Decimal('0.00')
+                balance = paid - pledge
+
+                if paid == 0:
+                    status = "Not Started"
+                elif paid < pledge:
+                    status = "Incomplete"
+                elif paid == pledge:
+                    status = "Complete"
+                else:
+                    status = "Exceeded"
+
+                row = [
+                    str(index),  # Index number
+                    member.name[:20] + "..." if len(member.name) > 20 else member.name,
+                    member.phone or '',
+                    f"TSh {float(pledge):,.0f}",
+                    f"TSh {float(paid):,.0f}",
+                    f"TSh {float(balance):,.0f}",
+                    status,
+                ]
+                table_data.append(row)
+
+            # Create table with proper column widths
+            members_table = Table(
+                table_data,
+                colWidths=[0.5*inch, 2*inch, 1.2*inch, 1*inch, 1*inch, 1.2*inch, 1.1*inch]
+            )
+            members_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498db')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+            ]))
+            elements.append(members_table)
 
         doc.build(elements)
         return response
